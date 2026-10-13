@@ -3,6 +3,15 @@ import path from 'path';
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
+// =====================================================================
+// Timezone ของระบบ — วันที่/เวลาจองทั้งหมดเป็นเวลาไทย (booking_date + 'HH:MM')
+// เหตุผล: Server บน Render ใช้ UTC → new Date() / combineDateTime() จะคลาด 7 ชม.
+//         (เช่น จองเวลาที่ผ่านไปแล้วได้, หน้าต่างเช็คอิน BR8 และเงินคืน BR12 ผิด)
+//         Node อ่าน process.env.TZ ใหม่ทุกครั้งที่สร้าง Date จึงตั้งที่นี่ได้ (ไฟล์นี้ถูก import ก่อนใช้ Date)
+// ฝั่ง PostgreSQL ตั้งด้วย: ALTER DATABASE postgres SET timezone TO 'Asia/Bangkok' (ดู supabase_schema.sql)
+// =====================================================================
+process.env.TZ = process.env.APP_TIMEZONE || 'Asia/Bangkok';
+
 export const config = {
   port: parseInt(process.env.PORT || '5000', 10),
   nodeEnv: process.env.NODE_ENV || 'development',

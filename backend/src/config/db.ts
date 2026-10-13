@@ -22,6 +22,9 @@ pool.on('error', (err) => {
 
 export type DbConnection = PoolClient;
 
+// Timezone เดียวกับฝั่ง Node (env.ts) — ค่าคงที่ ไม่ได้มาจาก input ผู้ใช้ จึงต่อ string ใน SQL ได้อย่างปลอดภัย
+const DB_TIMEZONE = (process.env.TZ || 'Asia/Bangkok').replace(/[^A-Za-z_/+-]/g, '');
+
 // =====================================================================
 // Supabase Admin Client — ใช้สำหรับอัปโหลดไฟล์ไปยัง Supabase Storage
 // ใช้ service_role key (bypass RLS) — ห้าม expose ไปฝั่ง Frontend เด็ดขาด
@@ -49,21 +52,14 @@ export const initDbPool = async (): Promise<boolean> => {
 };
 
 // =====================================================================
-// withConnection — อ่านอย่างเดียว / คำสั่งเดียว (ไม่ต้องการ Transaction)
+// withConnection — อ่านอย่างเดียว / คำสั่งเดียว
+// ห่อด้วย Transaction เบาๆ เหมือน withTransaction เพื่อให้ SET LOCAL TIME ZONE มีผล
+// (Supabase Transaction pooler ไม่เก็บค่า SET ข้าม Transaction)
 // =====================================================================
 export const withConnection = async <T>(
   fn: (conn: DbConnection) => Promise<T>,
-  _actorId?: number | null  // คงพารามิเตอร์ไว้ให้ interface เดิม repositories compile ผ่าน
-): Promise<T> => {
-  const client = await pool.connect().catch((err) => {
-    throw new AppError(`ไม่สามารถเชื่อมต่อฐานข้อมูล PostgreSQL ได้ (${(err as Error).message})`, 503);
-  });
-  try {
-    return await fn(client);
-  } finally {
-    client.release();
-  }
-};
+  actorId?: number | null  // คงพารามิเตอร์ไว้ให้ interface เดิม repositories compile ผ่าน
+): Promise<T> => withTransaction(fn, actorId);
 
 // =====================================================================
 // withTransaction — COMMIT เมื่อสำเร็จ, ROLLBACK เมื่อมีขั้นใดผิดพลาด
@@ -76,7 +72,9 @@ export const withTransaction = async <T>(
     throw new AppError(`ไม่สามารถเชื่อมต่อฐานข้อมูล PostgreSQL ได้ (${(err as Error).message})`, 503);
   });
   try {
-    await client.query('BEGIN');
+    // SET LOCAL มีผลเฉพาะใน Transaction นี้ → ใช้ได้กับ Supabase Transaction pooler (ค่า SET แบบ session ไม่คงอยู่)
+    // ทำให้ CURRENT_DATE / การเทียบ booking_date + เวลา กับ NOW() เป็นเวลาไทยเสมอ แม้ DB ตั้งค่า default ยังเป็น UTC
+    await client.query(`BEGIN; SET LOCAL TIME ZONE '${DB_TIMEZONE}'`);
     const result = await fn(client);
     await client.query('COMMIT');
     return result;
