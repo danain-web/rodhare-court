@@ -45,7 +45,6 @@ export const config = {
 export const BUSINESS_RULES = {
   HOLD_MINUTES: 15,              // BR3: ต้องชำระภายใน 15 นาที มิฉะนั้นยกเลิกอัตโนมัติ
   MAX_ADVANCE_DAYS: 30,          // BR4: จองล่วงหน้าได้ไม่เกิน 30 วัน
-  MAX_HOURS_PER_DAY: 2,          // BR4: ไม่เกิน 2 ชั่วโมงต่อวัน
   MIN_HOURS_BEFORE_CHANGE: 24,   // BR5: แก้ไขวัน/เวลาได้ก่อนเวลาใช้งานอย่างน้อย 24 ชม.
   CHECKIN_EARLY_MINUTES: 30,     // BR8: เช็คอินก่อนเวลาเริ่มได้ไม่เกิน 30 นาที
   LATE_FEE_PER_BLOCK: 20,        // BR11: คืนช้า 20 บาท ต่อ 15 นาที ต่อชิ้น

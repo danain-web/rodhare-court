@@ -89,8 +89,8 @@ export const CourtsListPage: React.FC = () => {
               <ShieldCheck className="h-5 w-5" />
             </div>
             <div className="text-xs">
-              <div className="font-semibold text-forest-950">เงื่อนไขโควตาผู้ใช้งาน (BR4)</div>
-              <div className="text-slate-500">จองล่วงหน้าได้ไม่เกิน 30 วัน • สูงสุด 2 ชม./วัน/สมาชิก</div>
+              <div className="font-semibold text-forest-950">เงื่อนไขการจอง (BR4)</div>
+              <div className="text-slate-500">จองล่วงหน้าได้ไม่เกิน 30 วัน</div>
             </div>
           </div>
         }
@@ -268,7 +268,7 @@ export const CourtsListPage: React.FC = () => {
           ระบบ Hold คอร์ทให้ 15 นาที หากไม่ชำระและส่งสลิปจะคืนสล็อตสู่สาธารณะอัตโนมัติ
         </RuleCard>
         <RuleCard code="BR4" title="สิทธิ์จอง" icon={<CalendarDays className="h-4 w-4" />}>
-          จองล่วงหน้าได้ไม่เกิน 30 วัน โควตาสูงสุดไม่เกิน 2 ชม./วัน/สมาชิก
+          จองล่วงหน้าได้ไม่เกิน 30 วัน
         </RuleCard>
         <RuleCard code="BR12" title="ยกเลิก/คืนเงิน" icon={<Wallet className="h-4 w-4" />}>
           ยกเลิกล่วงหน้ามากกว่า 24 ชม. รับเงินคืน 100% / 1-24 ชม. รับคืน 50% / น้อยกว่า 1 ชม. ไม่คืนเงิน

@@ -94,15 +94,6 @@ export class BookingService {
       );
     }
 
-    // BR4: โควตาไม่เกิน 2 ชั่วโมงต่อวันต่อผู้ใช้
-    const usedMinutes = await this.bookingRepository.sumUserMinutesOnDate(conn, v.userId, v.bookingDate, v.excludeBookingId);
-    const maxMinutes = BUSINESS_RULES.MAX_HOURS_PER_DAY * 60;
-    if (usedMinutes + minutes > maxMinutes) {
-      const remaining = Math.max(0, maxMinutes - usedMinutes) / 60;
-      throw AppError.badRequest(
-        `BR4: เกินโควตาการจอง ${BUSINESS_RULES.MAX_HOURS_PER_DAY} ชั่วโมงต่อวัน (วันที่ ${v.bookingDate} จองไว้แล้ว ${usedMinutes / 60} ชม. เหลือได้อีก ${remaining} ชม.)`
-      );
-    }
     return minutes;
   }
 

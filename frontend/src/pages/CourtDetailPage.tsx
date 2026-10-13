@@ -41,7 +41,6 @@ import {
 } from 'lucide-react';
 
 const DAYS = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
-const MAX_HOURS = 2; // BR4: ไม่เกิน 2 ชม./วัน
 
 // UCS-2.4 รายละเอียด/ค่าบริการ + UCS-2.2 ดูตารางเวลาว่างแบบ Real-Time
 export const CourtDetailPage: React.FC = () => {
@@ -93,7 +92,7 @@ export const CourtDetailPage: React.FC = () => {
     setNotice(null);
   };
 
-  // เลือกได้เฉพาะช่วงต่อเนื่องกัน ไม่เกิน 2 ชั่วโมง (BR4)
+  // เลือกได้เฉพาะช่วงต่อเนื่องกัน (ไม่จำกัดจำนวนชั่วโมง)
   const toggleSlot = (slot: AvailabilitySlot) => {
     setNotice(null);
     if (slot.status !== 'AVAILABLE') return;
@@ -107,10 +106,6 @@ export const CourtDetailPage: React.FC = () => {
     if (!range) return setSelected([slot.startTime]);
     const adjacent = slot.endTime === range.start || slot.startTime === range.end;
     if (!adjacent) return setSelected([slot.startTime]);
-    if (selected.length >= MAX_HOURS) {
-      setNotice(`BR4: เลือกได้สูงสุด ${MAX_HOURS} ชั่วโมงต่อวันต่อสมาชิก`);
-      return;
-    }
     setSelected([...selected, slot.startTime]);
   };
 
@@ -309,7 +304,7 @@ export const CourtDetailPage: React.FC = () => {
           <div>
             <h2 className="text-xl font-bold text-forest-950">ผังตารางเวลาประจำวัน (Court Availability Grid)</h2>
             <p className="text-xs text-slate-500">
-              {formatThaiDate(selectedDate)} • ว่าง {freeCount} จาก {slots.length} ช่วง • คลิกช่อง "ว่าง" ต่อเนื่องได้สูงสุด {MAX_HOURS} ชั่วโมง
+              {formatThaiDate(selectedDate)} • ว่าง {freeCount} จาก {slots.length} ช่วง • คลิกช่อง "ว่าง" ที่ต่อเนื่องกันเพื่อเลือกช่วงเวลา
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -385,7 +380,7 @@ export const CourtDetailPage: React.FC = () => {
           <Info className="mt-0.5 h-4 w-4 shrink-0 text-forest-600" />
           <div>
             <strong className="text-forest-900">ข้อกำหนดการจองสนาม (Business Rules BR3 & BR4):</strong> เมื่อยืนยันการจอง ระบบจะสงวนสิทธิ์ (Soft Lock)
-            ช่วงเวลาไว้ให้ 15 นาทีเพื่อชำระเงิน หากเกินเวลาระบบจะปลดสิทธิ์ให้เป็นสถานะ "ว่าง" โดยอัตโนมัติ และสมาชิกแต่ละท่านจองได้ไม่เกิน 2 ชั่วโมงต่อวัน
+            ช่วงเวลาไว้ให้ 15 นาทีเพื่อชำระเงิน หากเกินเวลาระบบจะปลดสิทธิ์ให้เป็นสถานะ "ว่าง" โดยอัตโนมัติ และจองล่วงหน้าได้ไม่เกิน 30 วัน
           </div>
         </div>
       </section>
@@ -458,7 +453,7 @@ export const CourtDetailPage: React.FC = () => {
                   : 'ยังไม่ได้เลือกช่วงเวลา — คลิกช่องสีเขียวด้านบน'}
               </div>
               <div className="text-[11px] text-slate-500">
-                โควตาที่เลือก: {selectedSlots.length}/{MAX_HOURS} ชม. (BR4) • <span className="text-amber-600">ล็อกสิทธิ์ 15 นาทีหลังยืนยันการจอง (BR3)</span>
+                เลือกแล้ว {selectedSlots.length} ชม. • <span className="text-amber-600">ล็อกสิทธิ์ 15 นาทีหลังยืนยันการจอง (BR3)</span>
               </div>
             </div>
           </div>

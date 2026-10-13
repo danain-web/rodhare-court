@@ -385,7 +385,7 @@ export const BookingDetailPage: React.FC = () => {
             </div>
           </div>
           <div className="rounded-xl bg-amber-50 p-3 text-xs text-amber-900">
-            การแก้ไขต้องทำล่วงหน้าอย่างน้อย 24 ชั่วโมงก่อนเวลาเริ่มใช้งานเดิม และช่วงเวลาใหม่ต้องว่าง (BR2) ไม่เกิน 2 ชม./วัน (BR4)
+            การแก้ไขต้องทำล่วงหน้าอย่างน้อย 24 ชั่วโมงก่อนเวลาเริ่มใช้งานเดิม และช่วงเวลาใหม่ต้องว่าง (BR2)
           </div>
           <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
             <button onClick={() => setShowUpdateModal(false)} className="btn-outline">

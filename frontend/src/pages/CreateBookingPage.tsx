@@ -238,9 +238,7 @@ export const CreateBookingPage: React.FC = () => {
                 <span className="badge-mint">{formatThaiDate(bookingDate)}</span>
                 <span className="badge-blue">
                   {startTime} - {endTime} น. ({hours} ชม.)
-                </span>
-                {hours > 2 && <span className="badge-rose">เกินโควตา 2 ชม./วัน (BR4) ระบบจะปฏิเสธ</span>}
-              </div>
+                </span>              </div>
             </div>
           </div>
 
@@ -295,7 +293,7 @@ export const CreateBookingPage: React.FC = () => {
             {[
               'BR1: ต้องเป็นสมาชิกสถานะปกติและเข้าสู่ระบบก่อนจองสนาม',
               'BR2: ระบบตรวจการจองทับซ้อนแบบ Real-time — ช่วงเวลาที่ถูกจองแล้วจะไม่สามารถจองซ้ำได้',
-              'BR4: จองล่วงหน้าได้ไม่เกิน 30 วัน และไม่เกิน 2 ชั่วโมงต่อวันต่อสมาชิก',
+              'BR4: จองล่วงหน้าได้ไม่เกิน 30 วัน',
               'BR8: เช็คอินเข้าสนามได้ก่อนเวลาเริ่มไม่เกิน 30 นาที',
             ].map((t) => (
               <div key={t} className="flex items-start gap-2 text-xs text-slate-600">

@@ -190,20 +190,6 @@ export class BookingRepository {
     return r ? { bookingNumber: r.booking_number, startTime: r.start_time, endTime: r.end_time } : null;
   }
 
-  // BR4: นับนาทีที่ผู้ใช้จองในวันนั้น
-  async sumUserMinutesOnDate(conn: DbConnection, userId: number, bookingDate: string, excludeBookingId?: number): Promise<number> {
-    const res = await conn.query<{ total_minutes: string }>(
-      `SELECT COALESCE(SUM(${bookingMinutes('b')}), 0) AS total_minutes
-         FROM bookings b
-        WHERE b.user_id = $1
-          AND b.booking_date = $2::DATE
-          AND b.status IN ('PENDING_PAYMENT', 'PAYMENT_VERIFIED', 'CONFIRMED', 'CHECKED_IN', 'COMPLETED')
-          AND b.booking_id <> $3`,
-      [userId, bookingDate, excludeBookingId ?? -1]
-    );
-    return Math.max(0, parseInt(res.rows[0]?.total_minutes || '0'));
-  }
-
   async hasUnpaidFines(conn: DbConnection, userId: number): Promise<boolean> {
     const result = await conn.query<{ unpaid_count: string }>(
       `SELECT COUNT(*) AS unpaid_count FROM fines f JOIN bookings b ON f.booking_id = b.booking_id
