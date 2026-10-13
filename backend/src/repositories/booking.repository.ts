@@ -166,7 +166,7 @@ export class BookingRepository {
   async lockUser(conn: DbConnection, userId: number, forUpdate = true): Promise<LockedUser | null> {
     const sql = `SELECT u.user_id, u.is_active, u.member_type_id, m.type_name, m.discount_percent
          FROM users u JOIN member_types m ON m.member_type_id = u.member_type_id
-        WHERE u.user_id = $1 ${forUpdate ? 'FOR UPDATE OF u.is_active' : ''}`;
+        WHERE u.user_id = $1 ${forUpdate ? 'FOR UPDATE OF u' : ''}`; // PostgreSQL: OF ต้องเป็นชื่อตาราง/alias (ล็อกแถว users อย่างเดียว ไม่ล็อก member_types)
     const res = await conn.query(sql, [userId]);
     const r = res.rows[0];
     if (!r) return null;

@@ -48,7 +48,7 @@ git add .
 git status          # ตรวจว่าไม่มี .env / node_modules / *.pdf หลุดมา (.gitignore กันไว้แล้ว)
 git commit -m "Production-ready: Supabase + httpOnly cookie auth + tests"
 git branch -M main
-git remote add origin https://github.com/<username>/rodhare-court.git
+git remote add origin https://github.com/danain-web/rodhare-court.git
 git push -u origin main
 ```
 

@@ -36,8 +36,14 @@ export const registerAndGetCookie = async (prefix: string) => {
 };
 
 // ลบผู้ใช้ทดสอบหลังจบเทสต์ (user_roles, user_sessions, notifications เป็น ON DELETE CASCADE)
+// ตารางที่อ้างถึง bookings แบบไม่ cascade → ลบตามลำดับ FK ก่อนลบ bookings และ users
+// (booking_status_history, booking_equipment, equipment_borrowings cascade ตาม booking อยู่แล้ว)
 export const deleteTestUsers = async (usernames: string[]) => {
   if (usernames.length === 0) return;
+  const bookingIds = `SELECT b.booking_id FROM bookings b JOIN users u ON u.user_id = b.user_id WHERE u.username = ANY($1::text[])`;
+  for (const table of ['notifications', 'receipts', 'refund_requests', 'fines', 'payments', 'bookings']) {
+    await pool.query(`DELETE FROM ${table} WHERE booking_id IN (${bookingIds})`, [usernames]);
+  }
   await pool.query('DELETE FROM users WHERE username = ANY($1::text[])', [usernames]);
 };
 
