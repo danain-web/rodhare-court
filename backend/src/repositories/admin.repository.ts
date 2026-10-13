@@ -2,6 +2,9 @@ import { DbConnection, firstInsertId } from '../config/db';
 import { SportTypeDTO, EquipmentAdminDTO, PromotionAdminDTO, PricingRateDTO, AuditLogDTO } from '../types/admin';
 import { PROMOTION_COLUMNS, mapPromotion } from './equipment.repository';
 
+const toJsonText = (value: unknown): string | undefined =>
+  value == null ? undefined : typeof value === 'string' ? value : JSON.stringify(value);
+
 export class AdminRepository {
   // =====================================================================
   // BR16: Audit log
@@ -23,8 +26,10 @@ export class AdminRepository {
       action:     r.action,
       entityName: r.entity_name,
       entityId:   r.entity_id ?? undefined,
-      oldValues:  r.old_values ?? undefined,
-      newValues:  r.new_values ?? undefined,
+      // PostgreSQL JSONB → pg คืนเป็น object แล้ว (Oracle เดิมคืน CLOB เป็น string)
+      // แปลงกลับเป็น string ตาม type ของ API ไม่งั้น React render object ไม่ได้ (Minified React error #31)
+      oldValues:  toJsonText(r.old_values),
+      newValues:  toJsonText(r.new_values),
       ipAddress:  r.ip_address ?? undefined,
       createdAt:  r.created_at,
     }));
