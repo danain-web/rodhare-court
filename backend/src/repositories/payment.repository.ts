@@ -66,8 +66,9 @@ export class PaymentRepository {
     const res = await conn.query(
       `INSERT INTO payments (booking_id, payment_method, amount, slip_url, slip_reference, slip_mime_type, slip_file_size,
                              status, verification_method, review_reason, rejection_reason, verified_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11,
-               CASE WHEN $8 = 'PENDING' THEN NULL ELSE NOW() END)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8::VARCHAR, $9, $10, $11,
+               -- PostgreSQL: พารามิเตอร์ที่ใช้ซ้ำต้อง cast ให้เป็นชนิดเดียวกันทุกจุด ไม่งั้น "inconsistent types deduced"
+               CASE WHEN $8::VARCHAR = 'PENDING' THEN NULL ELSE NOW() END)
        RETURNING payment_id`,
       [
         data.bookingId,
@@ -139,8 +140,8 @@ export class PaymentRepository {
 
   async markVerified(conn: DbConnection, paymentId: number, staffUserId: number | null): Promise<boolean> {
     const res = await conn.query(
-      `UPDATE payments SET status = 'VERIFIED', verified_by = $1, verified_at = NOW(), rejection_reason = NULL,
-              verification_method = CASE WHEN $1 IS NULL THEN 'AUTO' ELSE 'MANUAL' END
+      `UPDATE payments SET status = 'VERIFIED', verified_by = $1::INTEGER, verified_at = NOW(), rejection_reason = NULL,
+              verification_method = CASE WHEN $1::INTEGER IS NULL THEN 'AUTO' ELSE 'MANUAL' END
         WHERE payment_id = $2 AND status = 'PENDING'`,
       [staffUserId, paymentId]
     );
