@@ -12,13 +12,13 @@ export class RefundController {
   updateBooking = async (req: Request, res: Response) => {
     const user = currentUser(req);
     const updated = await this.refundService.updateBooking(parseIdParam(req), user.userId, updateBookingSchema.parse(req.body), req.ip);
-    return sendSuccess(res, updated, 'Booking schedule updated successfully (BR5 >= 24h)');
+    return sendSuccess(res, updated, 'Booking schedule updated successfully');
   };
 
   previewCancelRefund = async (req: Request, res: Response) => {
     const user = currentUser(req);
     const preview = await this.refundService.previewCancelRefund(parseIdParam(req), user.userId, user.roles);
-    return sendSuccess(res, preview, 'Refund preview calculated (BR12)');
+    return sendSuccess(res, preview, 'Refund preview calculated');
   };
 
   executeCancelWithRefund = async (req: Request, res: Response) => {
@@ -28,7 +28,7 @@ export class RefundController {
     return sendSuccess(
       res,
       result,
-      result.refundRequest ? 'Booking cancelled and refund request submitted (BR12)' : 'Booking cancelled (no refundable amount)'
+      result.refundRequest ? 'Booking cancelled and refund request submitted' : 'Booking cancelled (no refundable amount)'
     );
   };
 

@@ -22,13 +22,13 @@ export class BorrowingService {
       const bookingId = await this.bookingRepository.findBookingIdByNumber(conn, input.bookingNumber);
       const booking = bookingId ? await this.bookingRepository.lockBooking(conn, bookingId) : null;
       if (!booking) {
-        throw AppError.badRequest(`BR9: ไม่พบการจองหมายเลข ${input.bookingNumber} จึงไม่สามารถยืมอุปกรณ์ได้`);
+        throw AppError.badRequest(`ไม่พบการจองหมายเลข ${input.bookingNumber} จึงไม่สามารถยืมอุปกรณ์ได้`);
       }
       if (booking.status === 'PENDING_PAYMENT') {
-        throw AppError.badRequest('BR9: การจองนี้ยังไม่ได้ชำระเงิน ไม่สามารถยืมอุปกรณ์ได้');
+        throw AppError.badRequest('การจองนี้ยังไม่ได้ชำระเงิน ไม่สามารถยืมอุปกรณ์ได้');
       }
       if (!['CONFIRMED', 'PAYMENT_VERIFIED', 'CHECKED_IN'].includes(booking.status)) {
-        throw AppError.badRequest(`BR9: การจองอยู่ในสถานะ ${booking.status} ไม่สามารถยืมอุปกรณ์ได้`);
+        throw AppError.badRequest(`การจองอยู่ในสถานะ ${booking.status} ไม่สามารถยืมอุปกรณ์ได้`);
       }
 
       const now = new Date();
@@ -37,7 +37,7 @@ export class BorrowingService {
       const earliest = new Date(startAt.getTime() - BUSINESS_RULES.CHECKIN_EARLY_MINUTES * 60_000);
       if (now < earliest || now >= endAt) {
         throw AppError.badRequest(
-          `BR9: ยืมอุปกรณ์ได้เฉพาะในวันและเวลาที่จองไว้ (${booking.bookingDate} ${booking.startTime}-${booking.endTime})`
+          `ยืมอุปกรณ์ได้เฉพาะในวันและเวลาที่จองไว้ (${booking.bookingDate} ${booking.startTime}-${booking.endTime})`
         );
       }
 
@@ -121,7 +121,7 @@ export class BorrowingService {
             bookingId: borrowing.bookingId,
             fineType: 'LATE_RETURN',
             amount,
-            reason: `BR11: คืนช้า ${Math.ceil(lateMinutes)} นาที (${blocks} x 15 นาที x ฿${BUSINESS_RULES.LATE_FEE_PER_BLOCK} x ${borrowing.quantity} ชิ้น)`,
+            reason: `คืนช้า ${Math.ceil(lateMinutes)} นาที (${blocks} x 15 นาที x ฿${BUSINESS_RULES.LATE_FEE_PER_BLOCK} x ${borrowing.quantity} ชิ้น)`,
           })
         );
       }
@@ -136,7 +136,7 @@ export class BorrowingService {
               bookingId: borrowing.bookingId,
               fineType: input.condition === 'DAMAGED' ? 'DAMAGE' : 'LOSS',
               amount,
-              reason: `BR11: ${equipment.name} ${input.condition === 'DAMAGED' ? 'ชำรุด' : 'สูญหาย'} ${borrowing.quantity} ชิ้น x ราคาประเมิน ฿${equipment.replacementCost}`,
+              reason: `${equipment.name} ${input.condition === 'DAMAGED' ? 'ชำรุด' : 'สูญหาย'} ${borrowing.quantity} ชิ้น x ราคาประเมิน ฿${equipment.replacementCost}`,
             })
           );
         }

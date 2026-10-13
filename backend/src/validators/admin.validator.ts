@@ -39,7 +39,7 @@ export const promotionAdminSchema = z
     isActive: z.boolean().optional().default(true),
   })
   .refine((data) => data.startDate <= data.endDate, {
-    message: 'BR15: วันสิ้นสุดต้องไม่ก่อนวันเริ่ม',
+    message: 'วันสิ้นสุดต้องไม่ก่อนวันเริ่ม',
     path: ['endDate'],
   });
 

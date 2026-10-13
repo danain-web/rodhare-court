@@ -28,7 +28,7 @@ export class AuthService {
     if (!isMatch) throw AppError.unauthorized('ชื่อผู้ใช้/อีเมล หรือรหัสผ่านไม่ถูกต้อง');
 
     // BR1: ต้องเป็นสมาชิกที่มีสถานะปกติ
-    if (!user.isActive) throw AppError.forbidden('BR1: บัญชีถูกระงับการใช้งาน กรุณาติดต่อผู้ดูแลระบบ');
+    if (!user.isActive) throw AppError.forbidden('บัญชีถูกระงับการใช้งาน กรุณาติดต่อผู้ดูแลระบบ');
     if (user.roles.length === 0) throw AppError.forbidden('บัญชีนี้ยังไม่ได้รับสิทธิ์ใช้งานระบบ');
 
     const sessionId = crypto.randomUUID();
@@ -97,7 +97,7 @@ export class AuthService {
       }
       const memberTypeId = input.memberTypeId ?? (await this.userRepository.getDefaultMemberTypeId(conn));
       if (!memberTypeId) {
-        throw AppError.badRequest('ฐานข้อมูลยังไม่มีข้อมูลประเภทสมาชิก กรุณารัน reset_demo.bat (หรือ seed.sql) ก่อนสมัครสมาชิก');
+        throw AppError.badRequest('ฐานข้อมูลยังไม่มีข้อมูลประเภทสมาชิก กรุณาติดต่อผู้ดูแลระบบ');
       }
       const userId = await this.userRepository.createUser(conn, {
         username,

@@ -60,7 +60,7 @@ export class PaymentService {
 
         if (booking.status === 'EXPIRED') {
           throw AppError.badRequest(
-            `BR3: หมดเวลาการชำระเงินแล้ว (ต้องชำระภายใน ${BUSINESS_RULES.HOLD_MINUTES} นาที) การจองถูกยกเลิกอัตโนมัติ กรุณาทำรายการจองใหม่`
+            `หมดเวลาการชำระเงินแล้ว (ต้องชำระภายใน ${BUSINESS_RULES.HOLD_MINUTES} นาที) การจองถูกยกเลิกอัตโนมัติ กรุณาทำรายการจองใหม่`
           );
         }
         if (['CONFIRMED', 'PAYMENT_VERIFIED', 'CHECKED_IN', 'COMPLETED'].includes(booking.status)) {
@@ -110,7 +110,7 @@ export class PaymentService {
         const amountOk = amountsEqual(input.amount, booking.finalAmount);
         checks.push({
           code: 'AMOUNT',
-          label: 'ยอดเงินตรงกับยอดจอง (BR6)',
+          label: 'ยอดเงินตรงกับยอดจอง',
           passed: amountOk,
           detail: `ยอดในสลิป ฿${input.amount.toFixed(2)} / ยอดที่ต้องชำระ ฿${booking.finalAmount.toFixed(2)}`,
         });
@@ -145,7 +145,7 @@ export class PaymentService {
         if (dup || !amountOk) {
           const reason = dup
             ? `สลิปซ้ำ: เลขอ้างอิง ${slipRef} ถูกใช้แล้วกับการจอง ${dup.bookingNumber}`
-            : `BR6: ยอดเงินในสลิป (฿${input.amount.toFixed(2)}) ไม่ตรงกับยอดที่ต้องชำระ (฿${booking.finalAmount.toFixed(2)})`;
+            : `ยอดเงินในสลิป (฿${input.amount.toFixed(2)}) ไม่ตรงกับยอดที่ต้องชำระ (฿${booking.finalAmount.toFixed(2)})`;
           const paymentId = await this.paymentRepository.insertPayment(conn, {
             ...base,
             slipReference: dup ? null : slipRef,
@@ -169,7 +169,7 @@ export class PaymentService {
         if (unclear.length) {
           const reviewReason = `ภาพไม่ชัดเจน: ${unclear.join(', ')}`;
           const paymentId = await this.paymentRepository.insertPayment(conn, { ...base, status: 'PENDING', verificationMethod: 'MANUAL', reviewReason });
-          await insertStatusHistory(conn, booking.bookingId, 'PENDING_PAYMENT', `ส่งสลิปแล้ว (payment #${paymentId}) ${reviewReason} — ส่งให้พนักงานตรวจ หยุดนับเวลา BR3`, userId);
+          await insertStatusHistory(conn, booking.bookingId, 'PENDING_PAYMENT', `ส่งสลิปแล้ว (payment #${paymentId}) ${reviewReason} — ส่งให้พนักงานตรวจ หยุดนับเวลาชำระเงิน`, userId);
           await insertNotification(conn, { userId, bookingId: booking.bookingId, title: 'สลิปรอพนักงานตรวจสอบ (Manual Review)', message: `ระบบได้รับสลิปของการจอง ${booking.bookingNumber} ยอด ฿${input.amount.toFixed(2)} แล้ว แต่${reviewReason} จึงส่งให้พนักงานตรวจสอบ`, type: 'INFO' });
           await insertAudit(conn, { userId, action: 'SUBMIT_PAYMENT_MANUAL_REVIEW', entityName: 'payments', entityId: paymentId, newValues: { bookingId: booking.bookingId, amount: input.amount, slipReference: slipRef, status: 'PENDING', reviewReason }, ipAddress });
           return { result: 'MANUAL_REVIEW' as const, message: `${reviewReason} — ส่งให้พนักงานตรวจสอบแล้ว`, checks, payment: (await this.paymentRepository.getPaymentById(conn, paymentId))! };
@@ -231,7 +231,7 @@ export class PaymentService {
         throw AppError.conflict(`ไม่สามารถอนุมัติได้ เนื่องจากการจอง ${booking.bookingNumber} อยู่ในสถานะ ${booking.status}`);
       }
       if (!amountsEqual(payment.amount, booking.finalAmount)) {
-        throw AppError.badRequest(`BR6: ไม่สามารถอนุมัติได้ ยอดในสลิป ฿${payment.amount.toFixed(2)} ไม่ตรงกับยอดการจอง ฿${booking.finalAmount.toFixed(2)}`);
+        throw AppError.badRequest(`ไม่สามารถอนุมัติได้ ยอดในสลิป ฿${payment.amount.toFixed(2)} ไม่ตรงกับยอดการจอง ฿${booking.finalAmount.toFixed(2)}`);
       }
       if (payment.slipReference) {
         const dup = await this.paymentRepository.findSlipReferenceInUse(conn, payment.slipReference, payment.paymentId);

@@ -36,7 +36,7 @@ const decode = (token: string): AuthUserPayload => {
 export const requireAuth = async (req: Request, _res: Response, next: NextFunction) => {
   try {
     const token = extractToken(req);
-    if (!token) throw AppError.unauthorized('กรุณาเข้าสู่ระบบก่อน (BR1)');
+    if (!token) throw AppError.unauthorized('กรุณาเข้าสู่ระบบก่อน');
     const payload = decode(token);
     const isValidSession = await authService.validateSession(payload.sessionId);
     if (!isValidSession) {

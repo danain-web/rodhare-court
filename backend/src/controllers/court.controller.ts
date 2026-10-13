@@ -52,7 +52,7 @@ export class CourtController {
     const user = currentUser(req);
     const { imageUrl } = req.body || {};
     const updated = await this.courtService.updateCourtImage(parseIdParam(req), user.userId, imageUrl, req.ip);
-    return sendSuccess(res, updated, 'Court main image updated successfully (BR13, BR16)');
+    return sendSuccess(res, updated, 'Court main image updated successfully');
   };
 
   deleteCourt = async (req: Request, res: Response) => {

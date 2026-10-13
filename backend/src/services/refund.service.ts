@@ -52,13 +52,13 @@ export class RefundService {
       paidAmount = verified.amount;
       if (hoursUntilStart > BUSINESS_RULES.REFUND_FULL_HOURS) {
         refundPercentage = BUSINESS_RULES.REFUND_FULL_PERCENT;
-        reason = `BR12: ยกเลิกล่วงหน้ามากกว่า ${BUSINESS_RULES.REFUND_FULL_HOURS} ชั่วโมง ได้รับเงินคืน ${refundPercentage}%`;
+        reason = `ยกเลิกล่วงหน้ามากกว่า ${BUSINESS_RULES.REFUND_FULL_HOURS} ชั่วโมง ได้รับเงินคืน ${refundPercentage}%`;
       } else if (hoursUntilStart >= BUSINESS_RULES.REFUND_NONE_HOURS) {
         refundPercentage = BUSINESS_RULES.REFUND_LATE_PERCENT;
-        reason = `BR12: ยกเลิกล่วงหน้า ${BUSINESS_RULES.REFUND_NONE_HOURS}-${BUSINESS_RULES.REFUND_FULL_HOURS} ชั่วโมง ได้รับเงินคืน ${refundPercentage}%`;
+        reason = `ยกเลิกล่วงหน้า ${BUSINESS_RULES.REFUND_NONE_HOURS}-${BUSINESS_RULES.REFUND_FULL_HOURS} ชั่วโมง ได้รับเงินคืน ${refundPercentage}%`;
       } else {
         refundPercentage = 0;
-        reason = `BR12: ยกเลิกล่วงหน้าน้อยกว่า ${BUSINESS_RULES.REFUND_NONE_HOURS} ชั่วโมง ไม่ได้รับเงินคืน`;
+        reason = `ยกเลิกล่วงหน้าน้อยกว่า ${BUSINESS_RULES.REFUND_NONE_HOURS} ชั่วโมง ไม่ได้รับเงินคืน`;
       }
     } else if (pending) {
       // UC-04-03 ทางเลือก 1.2: ยกเลิกระหว่างรอตรวจสลิป -> สลิปถูกปฏิเสธ และส่งยอดที่โอนมาเข้ากระบวนการคืนเงิน
@@ -123,7 +123,7 @@ export class RefundService {
       this.assertOwnerOrStaff(booking, userId, roles);
 
       if (booking.status === 'CANCELLED' || booking.status === 'REFUNDED') throw AppError.conflict('การจองนี้ถูกยกเลิกไปแล้ว');
-      if (booking.status === 'EXPIRED') throw AppError.badRequest('การจองนี้หมดอายุแล้ว (BR3) ไม่ต้องยกเลิกซ้ำ');
+      if (booking.status === 'EXPIRED') throw AppError.badRequest('การจองนี้หมดอายุแล้ว ไม่ต้องยกเลิกซ้ำ');
 
       const preview = await this.buildPreview(conn, booking);
       if (!CANCELLABLE.includes(booking.status) || preview.hoursUntilStart <= 0) {
@@ -282,7 +282,7 @@ export class RefundService {
       const hoursUntilStart = hoursBetween(new Date(), combineDateTime(booking.bookingDate, booking.startTime));
       if (hoursUntilStart < BUSINESS_RULES.MIN_HOURS_BEFORE_CHANGE) {
         throw AppError.badRequest(
-          `BR5: แก้ไขวันหรือเวลาได้เฉพาะก่อนเวลาใช้งานอย่างน้อย ${BUSINESS_RULES.MIN_HOURS_BEFORE_CHANGE} ชั่วโมง (เหลือ ${Math.max(0, hoursUntilStart).toFixed(1)} ชั่วโมง)`
+          `แก้ไขวันหรือเวลาได้เฉพาะก่อนเวลาใช้งานอย่างน้อย ${BUSINESS_RULES.MIN_HOURS_BEFORE_CHANGE} ชั่วโมง (เหลือ ${Math.max(0, hoursUntilStart).toFixed(1)} ชั่วโมง)`
         );
       }
       if (await this.bookingRepository.hasPendingPayment(conn, bookingId)) {
@@ -352,7 +352,7 @@ export class RefundService {
       });
 
       const change = `${booking.bookingDate} ${booking.startTime}-${booking.endTime} → ${input.bookingDate} ${input.startTime}-${input.endTime}`;
-      await insertStatusHistory(conn, bookingId, booking.status, `แก้ไขวัน/เวลาการจอง (BR5): ${change}`, userId);
+      await insertStatusHistory(conn, bookingId, booking.status, `แก้ไขวัน/เวลาการจอง: ${change}`, userId);
       await insertNotification(conn, {
         userId,
         bookingId,

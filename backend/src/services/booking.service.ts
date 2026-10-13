@@ -62,7 +62,7 @@ export class BookingService {
     const lastDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + BUSINESS_RULES.MAX_ADVANCE_DAYS);
     if (v.bookingDate > formatLocalDate(lastDate)) {
       throw AppError.badRequest(
-        `BR4: จองล่วงหน้าได้ไม่เกิน ${BUSINESS_RULES.MAX_ADVANCE_DAYS} วัน (วันสุดท้ายที่จองได้คือ ${formatLocalDate(lastDate)})`
+        `จองล่วงหน้าได้ไม่เกิน ${BUSINESS_RULES.MAX_ADVANCE_DAYS} วัน (วันสุดท้ายที่จองได้คือ ${formatLocalDate(lastDate)})`
       );
     }
 
@@ -90,7 +90,7 @@ export class BookingService {
     );
     if (overlap) {
       throw AppError.conflict(
-        `BR2: ไม่สามารถจองได้ สนามนี้ถูกจองแล้วในช่วง ${overlap.startTime}–${overlap.endTime} (${overlap.bookingNumber})`
+        `ไม่สามารถจองได้ สนามนี้ถูกจองแล้วในช่วง ${overlap.startTime}–${overlap.endTime} (${overlap.bookingNumber})`
       );
     }
 
@@ -133,7 +133,7 @@ export class BookingService {
       // BR1: ต้องเป็นสมาชิกสถานะปกติ
       const user = await this.bookingRepository.lockUser(conn, userId);
       if (!user) throw AppError.unauthorized('ไม่พบผู้ใช้งาน กรุณาเข้าสู่ระบบใหม่');
-      if (!user.isActive) throw AppError.forbidden('BR1: บัญชีผู้ใช้ถูกระงับ ไม่สามารถจองสนามได้');
+      if (!user.isActive) throw AppError.forbidden('บัญชีผู้ใช้ถูกระงับ ไม่สามารถจองสนามได้');
 
       // ล็อกแถวสนามก่อนตรวจการจองทับ (คนที่ 2 ที่กดพร้อมกันต้องรอจน Transaction แรก COMMIT)
       const court = await this.bookingRepository.lockCourt(conn, input.courtId);
@@ -185,7 +185,7 @@ export class BookingService {
         conn,
         bookingId,
         'PENDING_PAYMENT',
-        `สร้างการจองแล้ว รอชำระเงินภายใน ${BUSINESS_RULES.HOLD_MINUTES} นาที (BR3)`,
+        `สร้างการจองแล้ว รอชำระเงินภายใน ${BUSINESS_RULES.HOLD_MINUTES} นาที`,
         userId
       );
       await insertNotification(conn, {
@@ -276,7 +276,7 @@ export class BookingService {
       await this.bookingRepository.transitionStatus(conn, booking.bookingId, ['CONFIRMED', 'PAYMENT_VERIFIED'], 'CHECKED_IN', {
         checkedInBy: actorId,
       });
-      await insertStatusHistory(conn, booking.bookingId, 'CHECKED_IN', 'เช็คอินเข้าใช้สนามแล้ว (BR8)', actorId);
+      await insertStatusHistory(conn, booking.bookingId, 'CHECKED_IN', 'เช็คอินเข้าใช้สนามแล้ว', actorId);
       await insertNotification(conn, {
         userId: booking.userId,
         bookingId: booking.bookingId,
@@ -309,7 +309,7 @@ export class BookingService {
     const minutesBeforeStart = hoursBetween(now, startAt) * 60;
     if (minutesBeforeStart > BUSINESS_RULES.CHECKIN_EARLY_MINUTES) {
       throw AppError.badRequest(
-        `BR8: ยังไม่ถึงเวลาเช็คอิน (สามารถเช็คอินได้ก่อนเวลาไม่เกิน ${BUSINESS_RULES.CHECKIN_EARLY_MINUTES} นาที, เริ่ม ${booking.bookingDate} ${booking.startTime})`
+        `ยังไม่ถึงเวลาเช็คอิน (สามารถเช็คอินได้ก่อนเวลาไม่เกิน ${BUSINESS_RULES.CHECKIN_EARLY_MINUTES} นาที, เริ่ม ${booking.bookingDate} ${booking.startTime})`
       );
     }
     if (now.getTime() >= endAt.getTime()) throw AppError.badRequest('เลยเวลาการจองแล้ว ไม่สามารถเช็คอินได้');

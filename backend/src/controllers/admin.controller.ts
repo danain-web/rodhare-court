@@ -45,7 +45,7 @@ export class AdminController {
   createPromotion = async (req: Request, res: Response) => {
     const user = currentUser(req);
     const promo = await this.adminService.createPromotion(user.userId, promotionAdminSchema.parse(req.body), req.ip);
-    return sendSuccess(res, promo, 'Promotion created successfully (BR14, BR15)', 201);
+    return sendSuccess(res, promo, 'Promotion created successfully', 201);
   };
 
   getPricingRates = async (_req: Request, res: Response) => {
@@ -55,6 +55,6 @@ export class AdminController {
   createPricingRate = async (req: Request, res: Response) => {
     const user = currentUser(req);
     const rate = await this.adminService.createPricingRate(user.userId, pricingRateSchema.parse(req.body), req.ip);
-    return sendSuccess(res, rate, 'Pricing rate created successfully (BR14)', 201);
+    return sendSuccess(res, rate, 'Pricing rate created successfully', 201);
   };
 }

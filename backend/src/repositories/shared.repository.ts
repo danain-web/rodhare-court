@@ -158,12 +158,12 @@ export const expireStaleHolds = async (
     if (!upd.rowCount) continue;
     expired++;
     await releaseUnborrowedEquipment(conn, row.booking_id);
-    await insertStatusHistory(conn, row.booking_id, 'EXPIRED', 'BR3: ไม่ชำระเงินภายใน 15 นาที ระบบยกเลิกอัตโนมัติและคืนสนาม/อุปกรณ์', null);
+    await insertStatusHistory(conn, row.booking_id, 'EXPIRED', 'ไม่ชำระเงินภายใน 15 นาที ระบบยกเลิกอัตโนมัติและคืนสนาม/อุปกรณ์', null);
     await insertNotification(conn, {
       userId: row.user_id,
       bookingId: row.booking_id,
       title: 'หมดเวลาชำระเงิน (Booking Expired)',
-      message: `การจอง ${row.booking_number} ถูกยกเลิกอัตโนมัติ เนื่องจากไม่ชำระเงินภายใน 15 นาที (BR3) หากต้องการใช้งานกรุณาจองใหม่`,
+      message: `การจอง ${row.booking_number} ถูกยกเลิกอัตโนมัติ เนื่องจากไม่ชำระเงินภายใน 15 นาที หากต้องการใช้งานกรุณาจองใหม่`,
       type: 'WARNING',
     });
     await insertAudit(conn, {

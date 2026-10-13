@@ -68,13 +68,13 @@ export class AdminService {
 
   async createPromotion(adminUserId: number, input: CreatePromotionInput, ipAddress?: string) {
     if (input.startDate > input.endDate) {
-      throw AppError.badRequest('BR15: วันสิ้นสุดโปรโมชั่นต้องไม่ก่อนวันเริ่ม');
+      throw AppError.badRequest('วันสิ้นสุดโปรโมชั่นต้องไม่ก่อนวันเริ่ม');
     }
     if ((input.startTime && !input.endTime) || (!input.startTime && input.endTime)) {
-      throw AppError.badRequest('BR15: ต้องระบุเวลาเริ่มและเวลาสิ้นสุดของโปรโมชั่นให้ครบทั้งคู่');
+      throw AppError.badRequest('ต้องระบุเวลาเริ่มและเวลาสิ้นสุดของโปรโมชั่นให้ครบทั้งคู่');
     }
     if (input.startTime && input.endTime && input.endTime <= input.startTime) {
-      throw AppError.badRequest('BR15: เวลาสิ้นสุดโปรโมชั่นต้องมากกว่าเวลาเริ่ม');
+      throw AppError.badRequest('เวลาสิ้นสุดโปรโมชั่นต้องมากกว่าเวลาเริ่ม');
     }
     if (input.discountType === 'PERCENT' && input.discountValue > 100) {
       throw AppError.badRequest('ส่วนลดแบบเปอร์เซ็นต์ต้องไม่เกิน 100%');

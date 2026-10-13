@@ -23,7 +23,7 @@ export class BookingController {
     const user = currentUser(req);
     const input = createBookingSchema.parse(req.body);
     const booking = await this.bookingService.createBooking(user.userId, input, req.ip);
-    return sendSuccess(res, booking, 'Booking created successfully — please pay within 15 minutes (BR3)', 201);
+    return sendSuccess(res, booking, 'Booking created successfully — please pay within 15 minutes', 201);
   };
 
   getMyBookings = async (req: Request, res: Response) => {
@@ -49,14 +49,14 @@ export class BookingController {
   checkIn = async (req: Request, res: Response) => {
     const user = currentUser(req);
     const booking = await this.bookingService.checkIn({ bookingId: parseIdParam(req) }, user.userId, user.roles, req.ip);
-    return sendSuccess(res, booking, 'Check-in successful (BR8)');
+    return sendSuccess(res, booking, 'Check-in successful');
   };
 
   staffCheckIn = async (req: Request, res: Response) => {
     const user = currentUser(req);
     const { bookingNumber } = checkInSchema.parse(req.body);
     const booking = await this.bookingService.checkIn({ bookingNumber }, user.userId, user.roles, req.ip);
-    return sendSuccess(res, booking, 'Check-in successful (BR8)');
+    return sendSuccess(res, booking, 'Check-in successful');
   };
 
   lookupByNumber = async (req: Request, res: Response) => {

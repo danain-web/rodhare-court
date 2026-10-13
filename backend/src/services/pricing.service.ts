@@ -43,23 +43,23 @@ export const assertPromotionUsable = (
   }
   const today = todayLocalDate();
   if (today > promo.endDate) {
-    throw AppError.badRequest(`BR15: โปรโมชั่น ${promo.code} หมดอายุแล้ว (ใช้ได้ถึง ${promo.endDate})`);
+    throw AppError.badRequest(`โปรโมชั่น ${promo.code} หมดอายุแล้ว (ใช้ได้ถึง ${promo.endDate})`);
   }
   if (!ctx) {
     if (today < promo.startDate) {
-      throw AppError.badRequest(`BR15: โปรโมชั่น ${promo.code} ยังไม่เริ่ม (เริ่ม ${promo.startDate})`);
+      throw AppError.badRequest(`โปรโมชั่น ${promo.code} ยังไม่เริ่ม (เริ่ม ${promo.startDate})`);
     }
     return promo;
   }
   if (ctx.bookingDate < promo.startDate || ctx.bookingDate > promo.endDate) {
     throw AppError.badRequest(
-      `BR15: โปรโมชั่น ${promo.code} ใช้ได้เฉพาะการจองวันที่ ${promo.startDate} ถึง ${promo.endDate}`
+      `โปรโมชั่น ${promo.code} ใช้ได้เฉพาะการจองวันที่ ${promo.startDate} ถึง ${promo.endDate}`
     );
   }
   if (promo.startTime && promo.endTime) {
     if (ctx.startTime < promo.startTime || ctx.endTime > promo.endTime) {
       throw AppError.badRequest(
-        `BR15: โปรโมชั่น ${promo.code} ใช้ได้เฉพาะช่วงเวลา ${promo.startTime}-${promo.endTime} เท่านั้น`
+        `โปรโมชั่น ${promo.code} ใช้ได้เฉพาะช่วงเวลา ${promo.startTime}-${promo.endTime} เท่านั้น`
       );
     }
   }

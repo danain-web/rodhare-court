@@ -42,6 +42,5 @@ router.patch('/notifications/:id/read', requireAuth, paymentController.markNotif
 router.get('/staff/payments/pending',       requireAuth, requireRole('STAFF', 'ADMIN'), paymentController.getPendingPayments);
 router.post('/staff/payments/:id/verify',   requireAuth, requireRole('STAFF', 'ADMIN'), paymentController.verifyPayment);
 router.post('/staff/payments/:id/reject',   requireAuth, requireRole('STAFF', 'ADMIN'), paymentController.rejectPayment);
-router.get('/payments/booking/:bookingId',  requireAuth, paymentController.getPaymentsByBooking);
 
 export default router;

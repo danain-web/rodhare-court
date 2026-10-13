@@ -31,7 +31,7 @@ export class DashboardController {
       {
         role: 'STAFF',
         user,
-        capabilities: ['Verify Slip & Payments (UC-7)', 'Customer Check-in (BR8)', 'Issue/Return Equipment (BR9-BR11)', 'Approve Refunds (BR12)'],
+        capabilities: ['Verify Slip & Payments', 'Customer Check-in', 'Issue/Return Equipment', 'Approve Refunds'],
         ...summary,
       },
       'Staff Dashboard Data'
@@ -47,10 +47,10 @@ export class DashboardController {
         role: 'ADMIN',
         user,
         capabilities: [
-          'Manage Courts & Sports (BR13)',
-          'Manage Pricing Rates & Promotions (BR14, BR15)',
-          'View Audit Logs (BR16)',
-          'View Reports (BR17)',
+          'Manage Courts & Sports',
+          'Manage Pricing Rates & Promotions',
+          'View Audit Logs',
+          'View Reports',
         ],
         ...summary,
       },
