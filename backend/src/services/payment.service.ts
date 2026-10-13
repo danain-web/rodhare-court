@@ -39,8 +39,9 @@ export class PaymentService {
   // ============================================================
   // UC-4: ลูกค้าส่งหลักฐานการโอน (สลิป)
   // ------------------------------------------------------------
-  // ระบบยังไม่มี API ของธนาคาร/PromptPay ที่ยืนยันได้ว่าเงินเข้าบัญชีจริง จึง "ไม่อนุมัติอัตโนมัติ"
+  // ระบบยังไม่มี API ของธนาคาร/PromptPay ที่ยืนยันได้ว่าเงินเข้าบัญชีจริง
   //   - สลิปซ้ำ / ยอดไม่ตรงยอดจอง → REJECTED ทันที (ลูกค้าส่งใหม่ได้ภายในเวลาที่เหลือ)
+  //   - โหมดสาธิต (PAYMENT_DEMO_MODE) + ภาพชัด → VERIFIED อัตโนมัติ (สำหรับนำเสนอด้วยสลิป demo)
   //   - นอกนั้น → payment PENDING รอพนักงานยืนยันยอดเงินเข้าบัญชี (หยุดนับเวลา 15 นาที)
   // ผลตรวจเบื้องต้น (ไฟล์, ยอด, ความชัด) เป็นข้อมูลประกอบให้พนักงานเท่านั้น
   // State: PENDING_PAYMENT ─ส่งสลิป→ (payment PENDING) ─พนักงานอนุมัติ→ CONFIRMED + ใบเสร็จ
@@ -95,13 +96,16 @@ export class PaymentService {
           detail: `${slip.mimeType} ${(slip.size / 1024).toFixed(1)} KB${slip.width ? ` (${slip.width}x${slip.height} px)` : ''}`,
         });
 
-        const dup = await this.paymentRepository.findSlipReferenceInUse(conn, slipRef);
-        checks.push({
-          code: 'DUPLICATE',
-          label: 'เลขอ้างอิงไม่ซ้ำกับสลิปอื่น',
-          passed: !dup,
-          detail: dup ? `เลขอ้างอิง ${slipRef} ถูกใช้แล้วกับการจอง ${dup.bookingNumber}` : `เลขอ้างอิง ${slipRef} ยังไม่เคยถูกใช้`,
-        });
+        // เลขอ้างอิงไม่บังคับ — ตรวจสลิปซ้ำได้เฉพาะเมื่อมีเลขอ้างอิงส่งมา
+        const dup = slipRef ? await this.paymentRepository.findSlipReferenceInUse(conn, slipRef) : null;
+        if (slipRef) {
+          checks.push({
+            code: 'DUPLICATE',
+            label: 'เลขอ้างอิงไม่ซ้ำกับสลิปอื่น',
+            passed: !dup,
+            detail: dup ? `เลขอ้างอิง ${slipRef} ถูกใช้แล้วกับการจอง ${dup.bookingNumber}` : `เลขอ้างอิง ${slipRef} ยังไม่เคยถูกใช้`,
+          });
+        }
 
         // ยอดที่ต้องชำระมาจาก booking.final_amount ที่ backend คำนวณ ไม่ใช่จาก client
         const amountOk = amountsEqual(input.amount, booking.finalAmount);
@@ -129,7 +133,7 @@ export class PaymentService {
           amount: input.amount,
           paymentMethod: input.paymentMethod,
           slipUrl: slip.storagePath, // เก็บ path ใน bucket (ไม่ใช่ public URL)
-          slipReference: slipRef,
+          slipReference: slipRef ?? null,
           slipMimeType: slip.mimeType,
           slipFileSize: slip.size,
         };
@@ -159,10 +163,25 @@ export class PaymentService {
           return { result: 'REJECTED' as const, message: reason, checks, payment: rejected };
         }
 
-        // ---------- ผลที่ 2: รอพนักงานยืนยันยอดเงินเข้าบัญชี (ไม่มีการอนุมัติอัตโนมัติ) ----------
+        // ---------- ผลที่ 2 (เฉพาะโหมดสาธิต): ยอดตรงและภาพชัด → อนุมัติอัตโนมัติ + ออกใบเสร็จ ----------
+        // ใช้สำหรับนำเสนอ/ทดสอบด้วยสลิป demo — ระบบจริง (ตั้งบัญชีรับเงินแล้ว) จะไม่เข้าเงื่อนไขนี้
+        if (config.paymentDemoMode && unclear.length === 0) {
+          const paymentId = await this.paymentRepository.insertPayment(conn, { ...base, status: 'PENDING', verificationMethod: 'AUTO' });
+          await insertStatusHistory(conn, booking.bookingId, 'PENDING_PAYMENT', `ส่งสลิปแล้ว (payment #${paymentId}) — โหมดสาธิต: ระบบอนุมัติอัตโนมัติ`, userId);
+          const { receipt } = await this.confirmPayment(conn, { paymentId }, booking, null, ipAddress);
+          return {
+            result: 'VERIFIED' as const,
+            message: `ชำระเงินเรียบร้อย (โหมดสาธิต: ระบบอนุมัติสลิปอัตโนมัติ) ออกใบเสร็จเลขที่ ${receipt.receiptNumber}`,
+            checks,
+            payment: (await this.paymentRepository.getPaymentById(conn, paymentId))!,
+            receipt,
+          };
+        }
+
+        // ---------- ผลที่ 3: รอพนักงานยืนยันยอดเงินเข้าบัญชี ----------
         const reviewReason = unclear.length
           ? `ตรวจเบื้องต้นผ่าน แต่ภาพอาจไม่ชัด: ${unclear.join(', ')}`
-          : 'ตรวจเบื้องต้นผ่าน (ยอดตรง เลขอ้างอิงไม่ซ้ำ) — รอยืนยันยอดเงินเข้าบัญชี';
+          : 'ตรวจเบื้องต้นผ่าน (ยอดตรงกับยอดจอง) — รอยืนยันยอดเงินเข้าบัญชี';
         const paymentId = await this.paymentRepository.insertPayment(conn, { ...base, status: 'PENDING', verificationMethod: 'MANUAL', reviewReason });
         await insertStatusHistory(conn, booking.bookingId, 'PENDING_PAYMENT', `ส่งสลิปแล้ว (payment #${paymentId}) รอพนักงานตรวจสอบ — หยุดนับเวลาชำระเงิน`, userId);
         await insertNotification(conn, {
@@ -205,8 +224,10 @@ export class PaymentService {
     return this.signSlipUrls(payments);
   }
 
-  // ยืนยันการชำระเงิน — เรียกได้จากพนักงานเท่านั้น (verifyPayment) และต้องอยู่ใน Transaction ที่ล็อก payment + booking แล้ว
-  private async confirmPayment(conn: DbConnection, payment: { paymentId: number }, booking: LockedBooking, staffUserId: number, ipAddress?: string): Promise<{ receipt: ReceiptDTO; notification: NotificationDTO }> {
+  // ยืนยันการชำระเงิน — พนักงานอนุมัติ (staffUserId) หรือระบบอนุมัติในโหมดสาธิต (null)
+  // ต้องอยู่ใน Transaction ที่ล็อก booking + payment แล้ว
+  private async confirmPayment(conn: DbConnection, payment: { paymentId: number }, booking: LockedBooking, staffUserId: number | null, ipAddress?: string): Promise<{ receipt: ReceiptDTO; notification: NotificationDTO }> {
+    const verifier = staffUserId === null ? 'ระบบอนุมัติอัตโนมัติ (โหมดสาธิต)' : 'พนักงานอนุมัติสลิป';
     const verified = await this.paymentRepository.markVerified(conn, payment.paymentId, staffUserId);
     if (!verified) throw AppError.conflict('สลิปนี้ถูกตรวจไปแล้ว');
     const confirmed = await this.bookingRepository.transitionStatus(conn, booking.bookingId, ['PENDING_PAYMENT', 'PAYMENT_VERIFIED'], 'CONFIRMED');
@@ -214,7 +235,7 @@ export class PaymentService {
 
     // ยอดในใบเสร็จ = ยอดที่ backend คำนวณ (booking.final_amount) ไม่ใช่ยอดที่ลูกค้ากรอก
     const issued = await this.paymentRepository.insertReceipt(conn, { bookingId: booking.bookingId, paymentId: payment.paymentId, totalAmount: booking.finalAmount });
-    await insertStatusHistory(conn, booking.bookingId, 'CONFIRMED', `ชำระเงินแล้ว (Paid) — พนักงานอนุมัติสลิป payment #${payment.paymentId} ออกใบเสร็จ ${issued.receiptNumber}`, staffUserId);
+    await insertStatusHistory(conn, booking.bookingId, 'CONFIRMED', `ชำระเงินแล้ว (Paid) — ${verifier} payment #${payment.paymentId} ออกใบเสร็จ ${issued.receiptNumber}`, staffUserId);
 
     const notification: NotificationDTO = {
       notificationId: 0, userId: booking.userId, bookingId: booking.bookingId,
@@ -223,7 +244,7 @@ export class PaymentService {
       type: 'SUCCESS', isRead: false, createdAt: new Date(),
     };
     await insertNotification(conn, notification);
-    await insertAudit(conn, { userId: staffUserId, action: 'VERIFY_PAYMENT', entityName: 'payments', entityId: payment.paymentId, oldValues: { paymentStatus: 'PENDING', bookingStatus: booking.status }, newValues: { paymentStatus: 'VERIFIED', bookingStatus: 'CONFIRMED', receiptNumber: issued.receiptNumber }, ipAddress });
+    await insertAudit(conn, { userId: staffUserId, action: staffUserId === null ? 'AUTO_VERIFY_PAYMENT_DEMO' : 'VERIFY_PAYMENT', entityName: 'payments', entityId: payment.paymentId, oldValues: { paymentStatus: 'PENDING', bookingStatus: booking.status }, newValues: { paymentStatus: 'VERIFIED', bookingStatus: 'CONFIRMED', receiptNumber: issued.receiptNumber }, ipAddress });
     return { receipt: (await this.paymentRepository.getReceiptByBookingId(conn, booking.bookingId))!, notification };
   }
 
@@ -322,6 +343,7 @@ export class PaymentService {
       bookingNumber: booking.bookingNumber,
       amount,
       configured: !!(payee.promptPayId || payee.bankAccountNo),
+      demo: config.paymentDemoMode,
       accountName: payee.accountName || undefined,
       promptPay: payee.promptPayId
         ? { maskedId: maskPromptPayId(payee.promptPayId), payload: buildPromptPayPayload(payee.promptPayId, amount) }

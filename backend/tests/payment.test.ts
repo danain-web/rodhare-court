@@ -74,7 +74,8 @@ describe('Payment form validation', () => {
     expect(res.status).toBe(400);
   });
 
-  it.each(['', 'ABC', 'REF-<script>', 'X'.repeat(31)])('เลขอ้างอิง "%s" ไม่ถูกต้อง → 400', async (slipReference) => {
+  // เลขอ้างอิงไม่บังคับแล้ว แต่ถ้าส่งมาต้องถูกรูปแบบ
+  it.each(['ABC', 'REF-<script>', 'X'.repeat(31)])('เลขอ้างอิง "%s" ไม่ถูกต้อง → 400', async (slipReference) => {
     const res = await submit({ slipReference });
     expect(res.status).toBe(400);
     expect(res.body.message).toMatch(/อ้างอิง/);

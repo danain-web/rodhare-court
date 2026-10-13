@@ -32,7 +32,8 @@ third-party cookie จะไม่ทิ้ง `auth_token` ทำให้ Logi
 | `FRONTEND_URL` | `https://rodhare-court.vercel.app` | **ต้องตรงกับโดเมนหน้าเว็บทุกตัวอักษร** (ใช้ตรวจ CSRF) · คั่นหลายค่าด้วย `,` |
 | `TRUST_PROXY` | `2` | Vercel + Render = 2 hop → Rate limit เห็น IP จริง |
 | `MAINTENANCE_INTERVAL_MS` | `60000` | งานยกเลิกการจองค้างชำระ |
-| `PAYMENT_ACCOUNT_NAME` | ชื่อบัญชีจริง | ไม่ตั้ง = หน้าชำระเงินแจ้งให้ติดต่อเจ้าหน้าที่ |
+| `PAYMENT_DEMO_MODE` | ไม่ตั้ง / `true` / `false` | โหมดสาธิต: QR จำลอง + อนุมัติสลิป demo อัตโนมัติ · ไม่ตั้ง = เปิดเองเมื่อยังไม่มีบัญชีจริง |
+| `PAYMENT_ACCOUNT_NAME` | ชื่อบัญชีจริง | ใช้คู่กับ `PAYMENT_PROMPTPAY_ID` / เลขบัญชี |
 | `PAYMENT_PROMPTPAY_ID` | เบอร์/เลขผู้เสียภาษีพร้อมเพย์จริง | ใช้สร้าง PromptPay QR พร้อมยอด |
 | `PAYMENT_BANK_NAME` / `PAYMENT_BANK_ACCOUNT_NO` | ธนาคาร / เลขบัญชีจริง | ไม่บังคับ |
 | `RATE_LIMIT_AUTH_MAX` / `RATE_LIMIT_BOOKING_MAX` / `RATE_LIMIT_PAYMENT_MAX` | `20` / `30` / `10` | ต่อ 15 นาที (ไม่ตั้ง = ค่านี้) |
@@ -43,9 +44,10 @@ third-party cookie จะไม่ทิ้ง `auth_token` ทำให้ Logi
 
 ### Supabase (ทำครั้งเดียวผ่าน Dashboard)
 1. **SQL Editor** → รันไฟล์ใน `database/migrations/` ตามลำดับเลข (รันซ้ำได้ ไม่ลบข้อมูล):
-   - `001_payment_requires_staff_verification.sql` — การชำระเงินที่ยืนยันแล้วต้องมีเจ้าหน้าที่เป็นผู้ยืนยัน
+   - (`001` ถูกถอดออกแล้ว — ถ้าเคยรันไปแล้ว `004` จะยกเลิกให้)
    - `002_booking_no_overlap_constraint.sql` — กันจองซ้อนที่ระดับฐานข้อมูล (รัน query ตรวจท้ายไฟล์ก่อน ต้องได้ 0 แถว)
    - `003_enable_row_level_security.sql` — เปิด RLS ทุกตาราง (ปิดการอ่านข้อมูลผ่าน REST API ด้วย anon key)
+   - `004_allow_demo_auto_approval.sql` — อนุญาตให้โหมดสาธิตอนุมัติสลิปอัตโนมัติ
 2. **Storage → bucket `slips` → Edit bucket → ปิด Public bucket** (สลิปเป็นข้อมูลส่วนบุคคล — ระบบออก Signed URL อายุสั้นให้เฉพาะเจ้าของการจองและเจ้าหน้าที่)
 3. **Advisors → Security Advisor** → ตรวจว่าไม่เหลือคำเตือน RLS
 
@@ -96,8 +98,9 @@ git push -u origin main
 - [ ] สมัครสมาชิก/Login บน Vercel ได้ → DevTools → Application → Cookies เห็น `auth_token` เป็น HttpOnly, Secure
 - [ ] Refresh หน้าแล้วยัง Login อยู่ (เช็กผ่าน `/api/auth/me`)
 - [ ] Cookie `auth_token` เป็น `SameSite=Lax`
-- [ ] หน้าชำระเงินแสดง QR พร้อมเพย์และชื่อบัญชีจริง (หรือข้อความให้ติดต่อเจ้าหน้าที่ ถ้ายังไม่ได้ตั้ง `PAYMENT_*`)
-- [ ] อัปโหลดสลิป → ขึ้น "รอเจ้าหน้าที่ตรวจสอบ" (ไม่มีการอนุมัติอัตโนมัติ) → พนักงานเห็นรูปและอนุมัติได้
+- [ ] หน้าชำระเงินแสดง QR (โหมดสาธิต = QR จำลองมีป้าย "สาธิต") และไม่มีช่องกรอกเลขอ้างอิง
+- [ ] แนบสลิป `demo_slips/slip_210_DEMO0001.png` → ชำระเงินเรียบร้อยทันที + ใบเสร็จ
+- [ ] แนบสลิป `_unclear` → "รอเจ้าหน้าที่ตรวจสอบ" → พนักงานเห็นรูปและอนุมัติได้
 - [ ] เปิด URL รูปสลิปเดิมแบบ public (ถ้ามี) ต้องเปิดไม่ได้หลังปิด Public bucket
 - [ ] กระดิ่งแจ้งเตือนแสดงรายการหลังสลิปถูกตรวจ
 - [ ] เปิด URL ย่อยตรงๆ เช่น `/courts` แล้ว Refresh ไม่ 404 (SPA fallback ใน vercel.json)
@@ -121,6 +124,7 @@ npm test
 | `booking.test.ts` | วงจรจอง → ส่งสลิป → รอตรวจ → พนักงานอนุมัติ → ใบเสร็จ 1 ใบ → ยกเลิก (ตรวจสถานะในฐานข้อมูล) |
 | `concurrency.test.ts` | 20 คนจองช่วงเดียวกันพร้อมกัน · ส่งสลิปซ้ำพร้อมกัน · อนุมัติซ้ำพร้อมกัน · งานหมดเวลาชนกับการอนุมัติ |
 | `payment.test.ts` | ตรวจฟอร์มสลิป: ไฟล์ปลอม, ยอดเงินผิดรูปแบบ, เลขอ้างอิง, field แปลกปลอม |
+| `demo.test.ts` | โหมดสาธิต: ไม่กรอกเลขอ้างอิง, สลิปชัดอนุมัติเอง, สลิปไม่ชัดเข้าคิว, ยอดผิดถูกปฏิเสธ |
 | `security.test.ts` | CSRF, JWT ปลอม/หมดอายุ/alg none, IDOR, สิทธิ์ตาม role, ขนาดคำขอ, rate limit, env validation, RLS |
 | `unit.test.ts` | PromptPay payload/CRC, validator, กฎเวลา, timezone, path ของสลิป |
 | `admin.test.ts` | Audit Log ส่งค่าเป็นชนิดที่ถูกต้อง |

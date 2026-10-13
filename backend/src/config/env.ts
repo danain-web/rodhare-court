@@ -49,13 +49,20 @@ export const config = {
   // Background job interval
   maintenanceIntervalMs: parseInt(env('MAINTENANCE_INTERVAL_MS') || '60000', 10),
 
-  // บัญชีรับเงินจริงของสนาม (แสดงให้ลูกค้าโอน) — ไม่ตั้ง = หน้าเว็บแจ้งให้ติดต่อเจ้าหน้าที่ ไม่แสดงข้อมูลสมมติ
+  // บัญชีรับเงินจริงของสนาม (แสดงให้ลูกค้าโอน)
   payee: {
     accountName:   env('PAYMENT_ACCOUNT_NAME'),
     promptPayId:   env('PAYMENT_PROMPTPAY_ID'),
     bankName:      env('PAYMENT_BANK_NAME'),
     bankAccountNo: env('PAYMENT_BANK_ACCOUNT_NO'),
   },
+
+  // โหมดสาธิต (สำหรับนำเสนอ/ทดสอบ): แสดง QR จำลอง + อนุมัติสลิปที่ยอดตรงและภาพชัดให้อัตโนมัติ
+  // ค่าเริ่มต้น: เปิดเมื่อยังไม่ได้ตั้งบัญชีรับเงินจริง · ตั้ง PAYMENT_DEMO_MODE=true|false เพื่อบังคับ
+  paymentDemoMode:
+    env('PAYMENT_DEMO_MODE') !== ''
+      ? env('PAYMENT_DEMO_MODE') === 'true'
+      : !env('PAYMENT_PROMPTPAY_ID') && !env('PAYMENT_BANK_ACCOUNT_NO'),
 };
 
 // =====================================================================
@@ -92,6 +99,9 @@ const configErrors = validateConfig();
 if (configErrors.length) {
   // ไม่ใส่ค่าจริงของตัวแปรลงข้อความ (กัน secret หลุดลง log)
   throw new Error(`Environment configuration ไม่ถูกต้อง:\n - ${configErrors.join('\n - ')}`);
+}
+if (config.paymentDemoMode && config.nodeEnv !== 'test') {
+  console.warn('⚠️  PAYMENT DEMO MODE: แสดง QR จำลองและอนุมัติสลิปอัตโนมัติ — ใช้สำหรับนำเสนอ/ทดสอบเท่านั้น');
 }
 
 // ค่าคงที่ของ Business Rules (อ้างอิงตาราง BR ในรายงาน)

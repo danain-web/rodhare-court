@@ -60,14 +60,15 @@ export interface PaymentInstructions {
   bookingNumber: string;
   amount: number;
   configured: boolean;
+  demo: boolean;             // โหมดสาธิต: แสดง QR จำลอง และระบบอนุมัติสลิปที่ยอดตรง/ภาพชัดให้อัตโนมัติ
   accountName?: string;
   promptPay?: { maskedId: string; payload: string };
   bank?: { bankName: string; accountNo: string };
 }
 
-// ไม่มีการอนุมัติอัตโนมัติ: REJECTED = ส่งใหม่ได้ · MANUAL_REVIEW = รอเจ้าหน้าที่ยืนยันยอดเงินเข้าบัญชี
+// REJECTED = ส่งใหม่ได้ · MANUAL_REVIEW = รอเจ้าหน้าที่ยืนยันยอดเงินเข้าบัญชี · VERIFIED = อนุมัติแล้ว (โหมดสาธิต)
 export interface SlipVerification {
-  result: 'REJECTED' | 'MANUAL_REVIEW';
+  result: 'REJECTED' | 'MANUAL_REVIEW' | 'VERIFIED';
   message: string;
   checks: SlipCheck[];
   receipt?: Receipt;

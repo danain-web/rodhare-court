@@ -28,6 +28,8 @@ import {
   Loader2,
   Package,
   Phone,
+  QrCode,
+  Receipt as ReceiptIcon,
   Send,
   ShieldCheck,
   XCircle,
@@ -38,12 +40,10 @@ const SLIP_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const SLIP_MAX_BYTES = 5 * 1024 * 1024;
 // ตรงกับกฎฝั่ง backend (payment.validator.ts)
 const MONEY_RE = /^(?:0|[1-9]\d{0,7})(?:\.\d{1,2})?$/;
-const SLIP_REF_RE = /^[A-Z0-9]{8,30}$/;
-const normalizeRef = (v: string) => v.replace(/[\s-]/g, '').toUpperCase();
 const toSatang = (baht: number) => Math.round(baht * 100);
 
-// ไม่มีการอนุมัติอัตโนมัติ — การอัปโหลดสลิปไม่ใช่หลักฐานว่าเงินเข้าบัญชี
 const RESULT_STYLE = {
+  VERIFIED: { box: 'border-mint-300 bg-mint-50', text: 'text-forest-800', title: 'ชำระเงินเรียบร้อย — ยืนยันการจองแล้ว' },
   REJECTED: { box: 'border-rose-300 bg-rose-50', text: 'text-rose-800', title: 'สลิปไม่ผ่านการตรวจสอบเบื้องต้น' },
   MANUAL_REVIEW: { box: 'border-amber-300 bg-amber-50', text: 'text-amber-900', title: 'ได้รับสลิปแล้ว — รอเจ้าหน้าที่ตรวจสอบยอดเงินเข้าบัญชี' },
 } as const;
@@ -65,8 +65,6 @@ export const CustomerPaymentPage: React.FC = () => {
   const [slipFile, setSlipFile] = useState<File | null>(null);
   const [slipPreview, setSlipPreview] = useState<string | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
-  // เลขอ้างอิงธุรกรรมต้องกรอกจากสลิปจริง (ไม่สร้างให้อัตโนมัติ)
-  const [slipReference, setSlipReference] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('PROMPTPAY');
   const [amountInput, setAmountInput] = useState<string>('');
   const [formError, setFormError] = useState<string | null>(null);
@@ -112,9 +110,16 @@ export const CustomerPaymentPage: React.FC = () => {
     enabled: hasValidId && booking?.status === 'PENDING_PAYMENT',
   });
 
-  // วาด PromptPay QR ในเครื่องผู้ใช้ (ไม่ส่งข้อมูลไปบริการภายนอก)
+  // QR ที่จะแสดง: พร้อมเพย์จริง (ถ้าตั้งบัญชีไว้) หรือ QR จำลองในโหมดสาธิต
+  // QR จำลองเป็นข้อความธรรมดา ไม่ใช่รหัสพร้อมเพย์ → แอปธนาคารสแกนแล้วชำระเงินไม่ได้ (ไม่มีเงินไปเข้าบัญชีใครโดยไม่ตั้งใจ)
+  const isDemoQr = !instructions?.promptPay && !!instructions?.demo;
+  const qrPayload =
+    instructions?.promptPay?.payload ??
+    (isDemoQr ? `RODHARE-COURT DEMO | ${instructions!.bookingNumber} | ${instructions!.amount.toFixed(2)} THB | NOT A REAL PAYMENT` : undefined);
+
+  // วาด QR ในเครื่องผู้ใช้ (ไม่ส่งข้อมูลไปบริการภายนอก)
   useEffect(() => {
-    const payload = instructions?.promptPay?.payload;
+    const payload = qrPayload;
     if (!payload) return setQrDataUrl(null);
     let cancelled = false;
     QRCode.toDataURL(payload, { margin: 1, width: 200, color: { dark: '#0a3528', light: '#ffffff' } })
@@ -123,7 +128,7 @@ export const CustomerPaymentPage: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [instructions?.promptPay?.payload]);
+  }, [qrPayload]);
 
   // ยอดโอนเริ่มต้น = ยอดสุทธิของการจอง (ลูกค้าแก้ให้ตรงสลิปจริงได้ หลังบ้านตรวจซ้ำ)
   useEffect(() => {
@@ -143,12 +148,6 @@ export const CustomerPaymentPage: React.FC = () => {
       setFormError('กรุณากรอกยอดเงินตามสลิปเป็นตัวเลข ทศนิยมไม่เกิน 2 ตำแหน่ง');
       return;
     }
-    const ref = normalizeRef(slipReference);
-    if (!SLIP_REF_RE.test(ref)) {
-      setFormError('กรุณากรอกเลขอ้างอิงจากสลิป (ตัวอักษรภาษาอังกฤษหรือตัวเลข 8–30 ตัว)');
-      return;
-    }
-
     setErrorMessage(null);
     setIsSubmitting(true);
     try {
@@ -157,7 +156,6 @@ export const CustomerPaymentPage: React.FC = () => {
         amount,
         paymentMethod,
         slipFile,
-        slipReference: ref,
       });
       setResult(res);
       await queryClient.invalidateQueries({ queryKey: ['bookingDetail', bookingId] });
@@ -239,6 +237,7 @@ export const CustomerPaymentPage: React.FC = () => {
       {result && (
         <div role="status" aria-live="polite" className={`mb-6 rounded-2xl border-2 p-5 ${RESULT_STYLE[result.verification.result].box}`}>
           <div className={`flex items-center gap-2 text-lg font-bold ${RESULT_STYLE[result.verification.result].text}`}>
+            {result.verification.result === 'VERIFIED' && <CheckCircle2 className="h-5 w-5" aria-hidden="true" />}
             {result.verification.result === 'REJECTED' && <XCircle className="h-5 w-5" aria-hidden="true" />}
             {result.verification.result === 'MANUAL_REVIEW' && <Hourglass className="h-5 w-5" aria-hidden="true" />}
             {RESULT_STYLE[result.verification.result].title}
@@ -268,6 +267,16 @@ export const CustomerPaymentPage: React.FC = () => {
             ))}
           </div>
           <div className="mt-4 flex flex-wrap gap-2">
+            {result.verification.result === 'VERIFIED' && (
+              <>
+                <Link to={`/receipt/${result.bookingId}`} className="btn-primary">
+                  <ReceiptIcon className="h-4 w-4" aria-hidden="true" /> ดูใบเสร็จ {result.verification.receipt?.receiptNumber}
+                </Link>
+                <Link to={`/my-bookings/${result.bookingId}`} className="btn-outline">
+                  <QrCode className="h-4 w-4" aria-hidden="true" /> Digital Pass / QR เช็คอิน
+                </Link>
+              </>
+            )}
             {result.verification.result === 'REJECTED' && (
               <button type="button" className="btn-outline" onClick={() => setResult(null)}>
                 แก้ไขข้อมูลแล้วส่งสลิปใหม่
@@ -299,14 +308,14 @@ export const CustomerPaymentPage: React.FC = () => {
               </div>
             </div>
 
-            {isPending && instructions && !instructions.configured && (
+            {isPending && instructions && !instructions.configured && !instructions.demo && (
               <Alert tone="warning" title="ยังไม่ได้ตั้งค่าบัญชีรับเงินออนไลน์">
                 กรุณาติดต่อเจ้าหน้าที่เคาน์เตอร์สนามเพื่อรับข้อมูลการชำระเงิน
               </Alert>
             )}
-            {instructions?.configured && (
+            {(instructions?.configured || instructions?.demo) && (
             <div className="grid gap-6 md:grid-cols-[auto_1fr]">
-              {instructions.promptPay && (
+              {(instructions.promptPay || isDemoQr) && (
                 <div className="mx-auto w-56 rounded-2xl bg-white p-4 text-center shadow-md ring-1 ring-slate-100">
                   <div className="mb-3 rounded-lg bg-forest-950 py-1.5 text-xs font-bold text-white">
                     PROMPTPAY <span className="text-mint-300">● พร้อมเพย์</span>
@@ -314,15 +323,25 @@ export const CustomerPaymentPage: React.FC = () => {
                   {qrDataUrl ? (
                     <img
                       src={qrDataUrl}
-                      alt={`QR พร้อมเพย์ ยอด ${formatTHB(instructions.amount)} ผู้รับ ${instructions.accountName ?? ''}`}
+                      alt={
+                        isDemoQr
+                          ? `QR จำลองสำหรับสาธิต ยอด ${formatTHB(instructions.amount)}`
+                          : `QR พร้อมเพย์ ยอด ${formatTHB(instructions.amount)} ผู้รับ ${instructions.accountName ?? ''}`
+                      }
                       className="mx-auto h-40 w-40"
                     />
                   ) : (
                     <div className="mx-auto flex h-40 w-40 items-center justify-center text-xs text-slate-400">กำลังสร้าง QR...</div>
                   )}
-                  <div className="mt-2 text-[11px] text-slate-500">
-                    พร้อมเพย์ {instructions.promptPay.maskedId} · ยอดถูกล็อกใน QR
-                  </div>
+                  {isDemoQr ? (
+                    <div className="mt-2 rounded-lg bg-amber-50 px-2 py-1 text-[11px] font-semibold text-amber-800">
+                      QR จำลอง (สาธิต) — ไม่สามารถชำระเงินจริงได้
+                    </div>
+                  ) : (
+                    <div className="mt-2 text-[11px] text-slate-500">
+                      พร้อมเพย์ {instructions.promptPay!.maskedId} · ยอดถูกล็อกใน QR
+                    </div>
+                  )}
                 </div>
               )}
               <div className="space-y-3">
@@ -350,8 +369,13 @@ export const CustomerPaymentPage: React.FC = () => {
                     </>
                   )}
                   <div className="mt-2 text-xs text-slate-600">
-                    ชื่อบัญชีผู้รับ: <strong>{instructions.accountName}</strong>
+                    ชื่อบัญชีผู้รับ: <strong>{instructions.accountName || 'บัญชีสาธิต (Demo)'}</strong>
                   </div>
+                  {instructions.demo && (
+                    <div className="mt-2 text-[11px] text-slate-500">
+                      ระบบอยู่ในโหมดสาธิต — แนบสลิปตัวอย่างได้เลย ไม่ต้องโอนเงินจริง
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-start gap-2 rounded-xl bg-panel p-3 text-xs text-slate-600">
                   <Info className="mt-0.5 h-4 w-4 shrink-0 text-forest-600" />
@@ -421,7 +445,7 @@ export const CustomerPaymentPage: React.FC = () => {
 
             <div className="card-soft space-y-3 p-4">
               <div className="text-sm font-semibold text-forest-950">ตรวจสอบความถูกต้องของข้อมูลตามสลิป</div>
-              <div className="grid gap-3 sm:grid-cols-3">
+              <div className="grid gap-3 sm:grid-cols-2">
                 <div>
                   <label className="label" htmlFor="payment-method">ช่องทางการชำระ</label>
                   <select id="payment-method" className="input bg-white" value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
@@ -446,25 +470,11 @@ export const CustomerPaymentPage: React.FC = () => {
                     {!amountMismatch && amountValid && <CheckCircle2 className="absolute right-3 top-3 h-4 w-4 text-mint-600" aria-hidden="true" />}
                   </div>
                 </div>
-                <div>
-                  <label className="label" htmlFor="slip-reference">เลขอ้างอิงจากสลิป (Ref) *</label>
-                  <input
-                    id="slip-reference"
-                    required
-                    autoComplete="off"
-                    aria-describedby="slip-reference-hint"
-                    className="input bg-white font-mono"
-                    value={slipReference}
-                    onChange={(e) => setSlipReference(e.target.value)}
-                  />
-                  <div id="slip-reference-hint" className="mt-1 text-[11px] text-slate-500">
-                    กรอกตามที่พิมพ์บนสลิป เช่น 016123456789ABC
-                  </div>
-                </div>
               </div>
               <div className="text-[11px] text-slate-500">
-                ระบบตรวจเบื้องต้น (เลขอ้างอิงซ้ำ • ยอดเงินตรงยอดจอง • ความชัดของภาพ) แล้วส่งให้เจ้าหน้าที่ยืนยันยอดเงินเข้าบัญชีทุกรายการ
-                — <strong>การส่งสลิปยังไม่ถือว่าชำระเงินสำเร็จ</strong>
+                {instructions?.demo
+                  ? 'โหมดสาธิต: ถ้ายอดเงินตรงกับยอดจองและภาพสลิปชัด ระบบจะยืนยันการจองให้ทันที — ภาพไม่ชัดจะส่งให้เจ้าหน้าที่ตรวจ'
+                  : 'ระบบตรวจเบื้องต้น (ยอดเงินตรงยอดจอง • ความชัดของภาพ) แล้วส่งให้เจ้าหน้าที่ยืนยันยอดเงินเข้าบัญชี — การส่งสลิปยังไม่ถือว่าชำระเงินสำเร็จ'}
               </div>
               {amountMismatch && (
                 <div id="slip-amount-error" role="alert" className="rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-700">

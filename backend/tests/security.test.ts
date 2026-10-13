@@ -1,7 +1,7 @@
 import request from 'supertest';
 import express from 'express';
 import jwt from 'jsonwebtoken';
-import { app, pool, registerAndGetCookie, deleteTestUsers, loginAs, futureDate, uniqueSlipRef, VALID_PNG } from './helpers';
+import { app, pool, registerAndGetCookie, deleteTestUsers, loginAs, futureDate } from './helpers';
 import { createUserRateLimiter } from '../src/middleware/security.middleware';
 import { validateConfig, config } from '../src/config/env';
 
@@ -183,19 +183,9 @@ describe('Database hardening (migrations)', () => {
     }
   });
 
-  it('ข้อมูลการชำระเงินที่ VERIFIED ต้องมีเจ้าหน้าที่ยืนยัน (chk_pay_verified_by_staff)', async () => {
-    const amount = (await pool.query('SELECT final_amount FROM bookings WHERE booking_id = $1', [bookingId])).rows[0].final_amount;
-    const slip = await request(app).post('/api/payments').set('Cookie', ownerCookies)
-      .field('bookingId', String(bookingId)).field('amount', Number(amount).toFixed(2))
-      .field('paymentMethod', 'PROMPTPAY').field('slipReference', uniqueSlipRef('S'))
-      .attach('slip', VALID_PNG, { filename: 'slip.png', contentType: 'image/png' });
-    expect(slip.status).toBe(201);
-    const paymentId = slip.body.data.payment.paymentId;
-
-    // พยายาม "อนุมัติอัตโนมัติ" ด้วย SQL ตรง ๆ (ไม่มี verified_by) → ฐานข้อมูลปฏิเสธ
-    await expect(
-      pool.query(`UPDATE payments SET status = 'VERIFIED', verification_method = 'AUTO', verified_at = NOW() WHERE payment_id = $1`, [paymentId])
-    ).rejects.toMatchObject({ code: '23514' });
+  it('migration 004 ถอด chk_pay_verified_by_staff ออกแล้ว (โหมดสาธิตอนุมัติอัตโนมัติได้)', async () => {
+    const res = await pool.query(`SELECT 1 FROM pg_constraint WHERE conname = 'chk_pay_verified_by_staff'`);
+    expect(res.rows).toHaveLength(0);
   });
 });
 

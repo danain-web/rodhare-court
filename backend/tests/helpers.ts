@@ -71,4 +71,12 @@ export const TINY_PNG = Buffer.from(
 );
 export const VALID_PNG = Buffer.concat([TINY_PNG, Buffer.alloc(2048)]);
 
+// PNG ที่ header ระบุขนาด 800x1200 px และไฟล์ใหญ่กว่า 10 KB → ผ่านเกณฑ์ "ภาพชัด" (เหมือนสลิป demo จริง)
+export const CLEAR_SLIP_PNG = (() => {
+  const buf = Buffer.concat([TINY_PNG, Buffer.alloc(12 * 1024)]);
+  buf.writeUInt32BE(800, 16);  // IHDR width
+  buf.writeUInt32BE(1200, 20); // IHDR height
+  return buf;
+})();
+
 export { app, pool };

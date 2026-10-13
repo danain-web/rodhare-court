@@ -29,11 +29,14 @@ export const submitPaymentFormSchema = z
       .transform(Number)
       .refine((v) => v > 0, 'จำนวนเงินต้องมากกว่า 0'),
     paymentMethod: z.enum(CUSTOMER_PAYMENT_METHODS, { error: 'paymentMethod ไม่ถูกต้อง' }).default('PROMPTPAY'),
+    // ไม่บังคับ (หน้าเว็บไม่ให้กรอกแล้ว) — ถ้าส่งมาต้องถูกรูปแบบ ใช้ตรวจสลิปซ้ำ
     slipReference: z
-      .string({ error: 'กรุณากรอกเลขอ้างอิงจากสลิป' })
+      .string()
       .max(60, 'เลขอ้างอิงสลิปยาวเกินไป')
       .transform(normalizeSlipRef)
-      .pipe(z.string().regex(SLIP_REF_RE, 'เลขอ้างอิงสลิปต้องเป็นตัวอักษรภาษาอังกฤษหรือตัวเลข 8–30 ตัว ตามที่พิมพ์บนสลิป')),
+      .pipe(z.string().regex(SLIP_REF_RE, 'เลขอ้างอิงสลิปต้องเป็นตัวอักษรภาษาอังกฤษหรือตัวเลข 8–30 ตัว ตามที่พิมพ์บนสลิป'))
+      .optional()
+      .or(z.literal('').transform(() => undefined)),
   })
   .strict();
 

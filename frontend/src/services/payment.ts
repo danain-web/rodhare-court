@@ -12,13 +12,11 @@ export const submitPaymentApi = async (data: {
   amount: string;            // ส่งตามที่ผู้ใช้กรอก (ตรวจรูปแบบแล้ว) — backend ตรวจซ้ำและเทียบกับยอดในฐานข้อมูล
   paymentMethod: string;
   slipFile: File;            // File object จาก <input type="file"> (บังคับ)
-  slipReference: string;     // เลขอ้างอิงจากสลิปจริง (บังคับ)
 }): Promise<SubmitPaymentResult> => {
   const form = new FormData();
   form.append('bookingId', String(data.bookingId));
   form.append('amount', data.amount);
   form.append('paymentMethod', data.paymentMethod);
-  form.append('slipReference', data.slipReference);
   // field ชื่อ 'slip' ตรงกับ upload.single('slip') ใน Backend
   form.append('slip', data.slipFile);
 

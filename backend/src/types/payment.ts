@@ -85,7 +85,7 @@ export interface CreatePaymentInput {
   // Multer Memory Storage buffer (multipart/form-data upload) — บังคับแนบไฟล์เสมอ
   slipBuffer: Buffer;
   slipMimeType: string;
-  slipReference: string;   // ผ่าน normalizeSlipRef + SLIP_REF_RE แล้ว
+  slipReference?: string;  // ไม่บังคับ · ถ้ามีผ่าน normalizeSlipRef + SLIP_REF_RE แล้ว
 }
 
 // ผลการตรวจสลิปเบื้องต้น (ข้อมูลประกอบให้พนักงาน — ไม่ใช่หลักฐานว่าเงินเข้าบัญชีแล้ว)
@@ -101,16 +101,18 @@ export interface PaymentInstructions {
   bookingNumber: string;
   amount: number;            // ยอดจาก bookings.final_amount
   configured: boolean;       // false = ยังไม่ได้ตั้งบัญชีรับเงินใน env
+  demo: boolean;             // true = โหมดสาธิต: หน้าเว็บแสดง QR จำลอง (สแกนจ่ายจริงไม่ได้)
   accountName?: string;
   promptPay?: { maskedId: string; payload: string };
   bank?: { bankName: string; accountNo: string };
 }
 
-// ระบบไม่มี API ตรวจการโอนจากธนาคาร จึงไม่อนุมัติอัตโนมัติ:
+// ผลการส่งสลิป:
 //   REJECTED      = ปฏิเสธทันที (สลิปซ้ำ / ยอดไม่ตรง) ส่งใหม่ได้
-//   MANUAL_REVIEW = รับสลิปแล้ว รอพนักงานยืนยันยอดเงินเข้าบัญชี (payment.status = PENDING)
+//   MANUAL_REVIEW = รอพนักงานยืนยันยอดเงินเข้าบัญชี (payment.status = PENDING)
+//   VERIFIED      = อนุมัติอัตโนมัติ — เกิดได้เฉพาะโหมดสาธิต (PAYMENT_DEMO_MODE) เท่านั้น
 export interface SlipVerificationResult {
-  result: 'REJECTED' | 'MANUAL_REVIEW';
+  result: 'REJECTED' | 'MANUAL_REVIEW' | 'VERIFIED';
   message: string;
   checks: SlipCheck[];
   payment: PaymentDTO;

@@ -31,6 +31,7 @@ export class PaymentController {
     const messages = {
       REJECTED:      'สลิปไม่ผ่านการตรวจสอบเบื้องต้น',
       MANUAL_REVIEW: 'ได้รับสลิปแล้ว — รอเจ้าหน้าที่ยืนยันยอดเงินเข้าบัญชี',
+      VERIFIED:      'ชำระเงินเรียบร้อย (โหมดสาธิต) — ยืนยันการจองและออกใบเสร็จแล้ว',
     };
     return sendSuccess(res, result, messages[result.result], 201);
   };
