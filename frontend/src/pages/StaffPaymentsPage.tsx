@@ -306,7 +306,7 @@ export const StaffPaymentsPage: React.FC = () => {
               <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
                 <div>
-                  <div className="font-semibold">ระบบตรวจสลิปอัตโนมัติส่งรายการนี้ให้พนักงานตรวจ</div>
+                  <div className="font-semibold">ผลตรวจเบื้องต้นของระบบ — ต้องตรวจยอดเงินเข้าบัญชีจริงก่อนอนุมัติ</div>
                   <div className="text-xs">
                     {selected.reviewReason}
                     {selected.slipMimeType && ` • ไฟล์ ${selected.slipMimeType} ${((selected.slipFileSize || 0) / 1024).toFixed(1)} KB`}
@@ -485,7 +485,7 @@ export const StaffPaymentsPage: React.FC = () => {
       </Modal>
 
       <Modal open={showFull && !!selected?.slipUrl} onClose={() => setShowFull(false)} title="ภาพสลิปขนาดเต็ม" size="lg">
-        {selected?.slipUrl && <img src={selected.slipUrl} alt="Slip full" className="mx-auto max-h-[70vh] object-contain" />}
+        {selected?.slipUrl && <img src={selected.slipUrl} alt={`สลิปการโอนของการจอง ${selected?.bookingNumber ?? ''}`} className="mx-auto max-h-[70vh] object-contain" />}
       </Modal>
     </StaffLayout>
   );

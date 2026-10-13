@@ -1,6 +1,7 @@
 import React from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { Link, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { loginUrlWithRedirect } from '../utils/redirect';
 import { ShieldAlert, Loader2 } from 'lucide-react';
 
 interface ProtectedRouteProps {
@@ -10,6 +11,7 @@ interface ProtectedRouteProps {
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles }) => {
   const { isAuthenticated, isLoading, user } = useAuth();
+  const location = useLocation();
 
   if (isLoading) {
     return (
@@ -23,7 +25,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowe
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    // จำหน้าที่ตั้งใจจะเข้า แล้วพากลับมาหลัง Login
+    return <Navigate to={loginUrlWithRedirect(location.pathname + location.search)} replace />;
   }
 
   if (allowedRoles && allowedRoles.length > 0) {

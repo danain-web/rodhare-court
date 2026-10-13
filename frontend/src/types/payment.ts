@@ -55,8 +55,19 @@ export interface SlipCheck {
   detail: string;
 }
 
+// ข้อมูลสำหรับโอนเงิน (ยอดจากฐานข้อมูล + บัญชีรับเงินจริงที่ตั้งไว้ฝั่ง backend)
+export interface PaymentInstructions {
+  bookingNumber: string;
+  amount: number;
+  configured: boolean;
+  accountName?: string;
+  promptPay?: { maskedId: string; payload: string };
+  bank?: { bankName: string; accountNo: string };
+}
+
+// ไม่มีการอนุมัติอัตโนมัติ: REJECTED = ส่งใหม่ได้ · MANUAL_REVIEW = รอเจ้าหน้าที่ยืนยันยอดเงินเข้าบัญชี
 export interface SlipVerification {
-  result: 'VERIFIED' | 'REJECTED' | 'MANUAL_REVIEW';
+  result: 'REJECTED' | 'MANUAL_REVIEW';
   message: string;
   checks: SlipCheck[];
   receipt?: Receipt;

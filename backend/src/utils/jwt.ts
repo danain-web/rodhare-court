@@ -1,19 +1,31 @@
 import jwt from 'jsonwebtoken';
+import { CookieOptions } from 'express';
 import { config } from '../config/env';
 import { AuthUserPayload } from '../types';
 
 // =====================================================================
-// generateToken — สร้าง JWT ใช้ expiresIn จาก config (.env: JWT_EXPIRES_IN)
+// JWT — ระบุ algorithm / issuer / audience ชัดเจนทั้งตอน sign และ verify
+// เหตุผล: กันการปลอม token ด้วย algorithm อื่น (เช่น "none") และกันนำ token ของระบบอื่นมาใช้
 // =====================================================================
+const JWT_ALGORITHM = 'HS256' as const;
+const JWT_ISSUER = 'rodhare-court-api';
+const JWT_AUDIENCE = 'rodhare-court-web';
+
 export const generateToken = (payload: AuthUserPayload): string => {
-  return jwt.sign(payload, config.jwtSecret, { expiresIn: config.jwtExpiresIn } as jwt.SignOptions);
+  return jwt.sign(payload, config.jwtSecret, {
+    algorithm: JWT_ALGORITHM,
+    expiresIn: config.jwtExpiresIn,
+    issuer: JWT_ISSUER,
+    audience: JWT_AUDIENCE,
+  } as jwt.SignOptions);
 };
 
-// =====================================================================
-// verifyToken — ตรวจสอบและถอดรหัส JWT
-// =====================================================================
 export const verifyToken = (token: string): AuthUserPayload => {
-  return jwt.verify(token, config.jwtSecret) as AuthUserPayload;
+  return jwt.verify(token, config.jwtSecret, {
+    algorithms: [JWT_ALGORITHM],
+    issuer: JWT_ISSUER,
+    audience: JWT_AUDIENCE,
+  }) as AuthUserPayload;
 };
 
 // =====================================================================
@@ -21,17 +33,25 @@ export const verifyToken = (token: string): AuthUserPayload => {
 // =====================================================================
 export const COOKIE_NAME = 'auth_token';
 
+// อายุ cookie = อายุ JWT (JWT_EXPIRES_IN เช่น 8h, 30m, 1d)
+const UNIT_MS: Record<string, number> = { s: 1000, m: 60_000, h: 3_600_000, d: 86_400_000 };
+const expiresInMs = (value: string): number => {
+  const match = /^(\d+)([smhd]?)$/.exec(value);
+  if (!match) return 8 * UNIT_MS.h;
+  return Number(match[1]) * (match[2] ? UNIT_MS[match[2]] : 1000);
+};
+
 // =====================================================================
-// cookieOptions — ตัวเลือก cookie สำหรับ production
-// httpOnly: true  → JavaScript ฝั่ง client อ่านไม่ได้ → ป้องกัน XSS
-// secure: true    → ส่งได้เฉพาะ HTTPS → ป้องกัน Man-in-the-Middle
-// sameSite: 'none' → จำเป็นสำหรับ Cross-Origin (Vercel ↔ Render)
-// maxAge         → อายุ cookie ตรงกับ JWT (8 ชม. = 28800 วินาที)
+// cookieOptions
+// httpOnly: true  → JavaScript ฝั่ง client อ่านไม่ได้ → ป้องกัน XSS ขโมย token
+// secure          → production ส่งเฉพาะ HTTPS
+// sameSite: lax   → Frontend เรียกผ่าน Vercel rewrite (โดเมนเดียวกัน) จึงไม่ต้องใช้ none
+//                   และเว็บอื่นส่ง POST แนบ cookie นี้ไม่ได้ (ป้องกัน CSRF ชั้นแรก)
 // =====================================================================
-export const cookieOptions = (isDev: boolean) => ({
+export const cookieOptions = (): CookieOptions => ({
   httpOnly: true,
-  secure: !isDev,              // development ใช้ HTTP ได้ (localhost)
-  sameSite: isDev ? ('lax' as const) : ('none' as const),
-  maxAge: 8 * 60 * 60 * 1000, // 8 ชั่วโมง (ms)
+  secure: config.isProduction || config.cookieSameSite === 'none',
+  sameSite: config.cookieSameSite,
+  maxAge: expiresInMs(config.jwtExpiresIn),
   path: '/',
 });

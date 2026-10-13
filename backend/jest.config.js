@@ -10,7 +10,12 @@ module.exports = {
   transform: {
     '^.+\\.ts$': ['@swc/jest', { jsc: { parser: { syntax: 'typescript' }, target: 'es2022' }, module: { type: 'commonjs' } }],
   },
-  // DB อยู่บน Supabase (ผ่านอินเทอร์เน็ต) → เผื่อเวลาให้แต่ละเทสต์
+  // ฐานข้อมูลทดสอบแยกจาก Production: เปิด PostgreSQL ในเครื่อง + โหลด schema/seed ก่อนรัน แล้วลบทิ้งหลังจบ
+  globalSetup: '<rootDir>/tests/setup/globalSetup.ts',
+  globalTeardown: '<rootDir>/tests/setup/globalTeardown.ts',
+  setupFiles: ['<rootDir>/tests/setup/guard.ts'],
+  // Supabase Storage เป็นบริการภายนอก → ใช้ test double (in-memory) แทนในเทสต์
+  setupFilesAfterEnv: ['<rootDir>/tests/setup/storageMock.ts'],
   testTimeout: 30000,
   // รันทีละไฟล์ เพื่อไม่ให้หลายไฟล์แย่ง connection pool / rate limit พร้อมกัน
   maxWorkers: 1,

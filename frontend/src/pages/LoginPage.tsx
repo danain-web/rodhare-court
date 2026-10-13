@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { safeRedirectPath } from '../utils/redirect';
 import { useAuth } from '../context/AuthContext';
 import { loginApi } from '../services/auth';
 import { BrandMark } from '../components/Navbar';
 import { Alert } from '../components/ui';
 import { Briefcase, CalendarCheck, KeyRound, Loader2, ShieldCheck, Timer, UserCheck, UserCog, Users } from 'lucide-react';
+import { BRAND_NAME } from '../config/brand';
 
 // หน้าเข้าสู่ระบบ (BR1) — ออกแบบใหม่ตาม Design System ของ Prototype
 export const LoginPage: React.FC = () => {
@@ -15,6 +17,8 @@ export const LoginPage: React.FC = () => {
 
   const { login } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirectTo = safeRedirectPath(searchParams.get('redirect'));
 
   const handleLogin = async (idVal: string, passVal: string) => {
     setErrorMessage(null);
@@ -23,7 +27,7 @@ export const LoginPage: React.FC = () => {
       const data = await loginApi(idVal, passVal);
       // Backend set httpOnly Cookie อัตโนมัติ — ส่งแค่ user data มาเก็บใน context
       login(data.user);
-      navigate('/dashboard');
+      navigate(redirectTo ?? '/dashboard', { replace: true });
     } catch (err: any) {
       setErrorMessage(err.response?.data?.message || err.message || 'Login failed');
     } finally {
@@ -59,7 +63,7 @@ export const LoginPage: React.FC = () => {
         <div className="relative flex items-center gap-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-mint-300 text-lg font-extrabold text-forest-950">B</div>
           <div>
-            <div className="text-xl font-bold text-white">Barbie Sports Arena</div>
+            <div className="text-xl font-bold text-white">{BRAND_NAME}</div>
             <div className="text-xs text-mint-200">ศูนย์กีฬาและบริการยืมอุปกรณ์ออนไลน์</div>
           </div>
         </div>
@@ -74,7 +78,7 @@ export const LoginPage: React.FC = () => {
             {[
               { i: <CalendarCheck className="h-5 w-5" />, t: 'จองแบบ Real-time', d: 'ไม่มีการจองทับซ้อน' },
               { i: <Timer className="h-5 w-5" />, t: 'ล็อกสนามให้', d: '15 นาทีระหว่างชำระเงิน' },
-              { i: <ShieldCheck className="h-5 w-5" />, t: 'ตรวจสลิปอัตโนมัติ', d: 'ยอดเงินและสลิปซ้ำ' },
+              { i: <ShieldCheck className="h-5 w-5" />, t: 'ตรวจสลิปโดยเจ้าหน้าที่', d: 'ยืนยันยอดเงินเข้าบัญชีจริง' },
             ].map((x) => (
               <div key={x.t} className="rounded-2xl bg-white/10 p-4 backdrop-blur">
                 <div className="text-mint-300">{x.i}</div>
@@ -84,7 +88,7 @@ export const LoginPage: React.FC = () => {
             ))}
           </div>
         </div>
-        <div className="relative text-xs text-white/50">© 2026 Barbie Sports Arena — CP422022 Database Term Project</div>
+        <div className="relative text-xs text-white/50">© 2026 {BRAND_NAME}</div>
       </div>
 
       {/* ฟอร์มเข้าสู่ระบบ */}

@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -6,6 +7,7 @@ import routes from './routes';
 import { errorHandler } from './middleware/error.middleware';
 import { notFoundHandler } from './middleware/notFound.middleware';
 import { config } from './config/env';
+import { csrfOriginCheck } from './middleware/security.middleware';
 
 const app = express();
 
@@ -15,6 +17,17 @@ const app = express();
 //         และ Rate Limit จะนับผู้ใช้ทุกคนเป็นคนเดียวกัน
 // =====================================================================
 app.set('trust proxy', config.trustProxy);
+
+// =====================================================================
+// Request ID — ทุกคำขอมีรหัสอ้างอิง ส่งกลับใน header X-Request-Id และใน error response
+// ใช้ตามหา log ฝั่ง server เมื่อผู้ใช้แจ้งปัญหา (โดยไม่ต้องเปิดเผยรายละเอียดภายใน)
+// =====================================================================
+app.use((req, res, next) => {
+  const id = crypto.randomUUID();
+  (req as any).id = id;
+  res.setHeader('X-Request-Id', id);
+  next();
+});
 
 // =====================================================================
 // Security Middleware
@@ -43,11 +56,19 @@ app.use(
 app.use(cookieParser());
 
 // =====================================================================
-// Body Parser — รองรับ JSON และ multipart/form-data
-// ขนาด 8mb: หน้า Admin อัปโหลดรูปสนามเป็น base64 ไม่เกิน ~7MB
+// CSRF — คำขอที่เปลี่ยนข้อมูลต้องมาจากโดเมน Frontend ที่อนุญาต (ตรวจ Origin/Referer)
+// ใช้คู่กับ Cookie SameSite=Lax (ดู middleware/security.middleware.ts)
 // =====================================================================
-app.use(express.json({ limit: '8mb' }));
-app.use(express.urlencoded({ extended: true, limit: '8mb' }));
+app.use(csrfOriginCheck);
+
+// =====================================================================
+// Body Parser — จำกัดขนาดคำขอ (กัน request ใหญ่จนกิน RAM)
+// 8mb เฉพาะ endpoint รูปสนามของ Admin (ส่ง base64 ~7MB) · ที่เหลือ 100kb
+// ไฟล์สลิปเป็น multipart → จำกัดใน multer (payment.routes.ts)
+// =====================================================================
+app.use(/^\/api\/admin\/courts\/\d+\/image$/, express.json({ limit: '8mb' }));
+app.use(express.json({ limit: '100kb' }));
+app.use(express.urlencoded({ extended: false, limit: '100kb' }));
 
 // =====================================================================
 // API Routes

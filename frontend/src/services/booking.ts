@@ -19,8 +19,9 @@ export const calculatePriceApi = async (data: {
   endTime: string;
   equipmentItems?: { equipmentId: number; quantity: number }[];
   promotionCode?: string;
-}): Promise<PriceBreakdown> => {
-  const response = await api.post('/bookings/calculate-price', data);
+}, signal?: AbortSignal): Promise<PriceBreakdown> => {
+  // signal: ยกเลิกคำขอเก่าเมื่อผู้ใช้เปลี่ยนวัน/เวลา/อุปกรณ์ก่อนผลกลับมา
+  const response = await api.post('/bookings/calculate-price', data, { signal });
   return response.data.data;
 };
 

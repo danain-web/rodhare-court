@@ -5,6 +5,7 @@ import { CourtCard } from '../components/CourtCard';
 import { CustomerLayout } from '../components/layout/CustomerLayout';
 import { EmptyState, LoadingState, PageHeader, RuleCard, addDaysISO, formatThaiDate, sportLabel, todayISO } from '../components/ui';
 import { CalendarDays, Clock4, RotateCcw, Search, ShieldCheck, SlidersHorizontal, Timer, Wallet } from 'lucide-react';
+import { BRAND_NAME } from '../config/brand';
 
 const PERIODS = [
   { key: 'morning', label: 'ช่วงเช้า', range: '08:00 - 12:00', from: '08:00', to: '12:00' },
@@ -261,7 +262,7 @@ export const CourtsListPage: React.FC = () => {
           </div>
           <div>
             <h3 className="text-lg font-bold text-forest-950">ระเบียบและเงื่อนไขการจองสนาม</h3>
-            <p className="text-xs text-slate-500">เพื่อความเป็นระเบียบและสิทธิประโยชน์ที่เท่าเทียมของสมาชิก Barbie Sports Arena ทุกท่าน</p>
+            <p className="text-xs text-slate-500">เพื่อความเป็นระเบียบและสิทธิประโยชน์ที่เท่าเทียมของสมาชิก {BRAND_NAME} ทุกท่าน</p>
           </div>
         </div>
         <RuleCard code="ชำระเงิน" title="ชำระเงินใน 15 นาที" icon={<Timer className="h-4 w-4" />}>

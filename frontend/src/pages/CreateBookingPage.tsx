@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { getCourtByIdApi } from '../services/court';
 import { getEquipmentApi, validatePromotionApi, calculatePriceApi, createBookingApi } from '../services/booking';
 import { Promotion } from '../types/booking';
@@ -22,6 +22,7 @@ import {
   ShieldCheck,
   Tag,
 } from 'lucide-react';
+import { BRAND_NAME } from '../config/brand';
 
 const HOURS_START = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21];
 const HOURS_END = [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22];
@@ -31,7 +32,10 @@ export const CreateBookingPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  const courtId = parseInt(searchParams.get('courtId') || '1', 10);
+  // ไม่มี courtId ใน URL → แจ้งผู้ใช้ (ไม่เดาเป็นสนามหมายเลข 1)
+  const rawCourtId = searchParams.get('courtId') || '';
+  const courtId = /^[1-9]\d*$/.test(rawCourtId) ? Number(rawCourtId) : NaN;
+  const hasValidCourt = Number.isInteger(courtId);
   const initialDate = searchParams.get('date') || todayISO();
   const initialSlot = searchParams.get('slot') || '10:00-11:00';
 
@@ -48,9 +52,10 @@ export const CreateBookingPage: React.FC = () => {
   const [rejectionError, setRejectionError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { data: court } = useQuery({
+  const { data: court, isError: courtError } = useQuery({
     queryKey: ['courtDetail', courtId],
     queryFn: () => getCourtByIdApi(courtId),
+    enabled: hasValidCourt,
   });
 
   const { data: equipmentList = [] } = useQuery({
@@ -64,28 +69,28 @@ export const CreateBookingPage: React.FC = () => {
     .filter(([_, qty]) => qty > 0)
     .map(([id, qty]) => ({ equipmentId: parseInt(id, 10), quantity: qty }));
 
-  const {
-    data: priceBreakdown,
-    refetch: refetchPrice,
-    error: priceError,
-  } = useQuery({
+  // queryKey มีทุกค่าที่ใช้คำนวณราคา → React Query ดึงใหม่เองเมื่อค่าเปลี่ยน (ไม่ต้อง refetch ซ้ำใน useEffect)
+  // และคำตอบของ key เก่าที่มาช้าจะไม่เขียนทับราคาของ key ปัจจุบัน
+  // placeholderData: แสดงราคาเดิมระหว่างโหลด กันหน้ากระโดด
+  const { data: priceBreakdown, error: priceError } = useQuery({
     queryKey: ['priceCalc', courtId, bookingDate, startTime, endTime, equipmentItemsPayload, appliedPromo?.code],
-    queryFn: () =>
-      calculatePriceApi({
-        courtId,
-        bookingDate,
-        startTime,
-        endTime,
-        equipmentItems: equipmentItemsPayload,
-        promotionCode: appliedPromo?.code,
-      }),
-    enabled: !!court && startTime < endTime,
+    queryFn: ({ signal }) =>
+      calculatePriceApi(
+        {
+          courtId,
+          bookingDate,
+          startTime,
+          endTime,
+          equipmentItems: equipmentItemsPayload,
+          promotionCode: appliedPromo?.code,
+        },
+        signal
+      ),
+    enabled: hasValidCourt && !!court && startTime < endTime,
+    placeholderData: keepPreviousData,
+    staleTime: 30_000,
     retry: false,
   });
-
-  useEffect(() => {
-    refetchPrice();
-  }, [equipmentQty, bookingDate, startTime, endTime, appliedPromo]);
 
   const handleApplyPromo = async () => {
     if (!promoCodeInput.trim()) return;
@@ -108,6 +113,7 @@ export const CreateBookingPage: React.FC = () => {
   };
 
   const handleConfirmBooking = async () => {
+    if (isSubmitting) return; // กันกดซ้ำระหว่างรอผล (backend กันซ้ำอีกชั้นด้วยการล็อกสนาม)
     setRejectionError(null);
     setIsSubmitting(true);
     try {
@@ -133,6 +139,19 @@ export const CreateBookingPage: React.FC = () => {
   const pb: any = priceBreakdown;
   const priceErrMsg = (priceError as any)?.response?.data?.message;
   const hours = Math.max(0, parseInt(endTime) - parseInt(startTime));
+
+  if (!hasValidCourt || courtError) {
+    return (
+      <CustomerLayout>
+        <Alert tone="error" title="ไม่พบสนามที่เลือก">
+          กรุณาเลือกสนามและช่วงเวลาใหม่จาก{' '}
+          <Link to="/courts" className="font-semibold underline">
+            หน้าค้นหาสนาม
+          </Link>
+        </Alert>
+      </CustomerLayout>
+    );
+  }
 
   return (
     <CustomerLayout>
@@ -180,7 +199,7 @@ export const CreateBookingPage: React.FC = () => {
                   <div className="text-[11px] font-semibold uppercase tracking-wider text-mint-200">Premium Court</div>
                   <div className="text-2xl font-bold md:text-3xl">{court?.name || 'กำลังโหลด...'}</div>
                   <div className="mt-1 flex items-center gap-1 text-xs text-white/80">
-                    <MapPin className="h-3.5 w-3.5" /> {court?.locationDetails || 'Barbie Sports Arena'}
+                    <MapPin className="h-3.5 w-3.5" /> {court?.locationDetails || BRAND_NAME}
                   </div>
                 </div>
                 <div className="text-right">

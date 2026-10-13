@@ -3,6 +3,7 @@ import { BookingController } from '../controllers/booking.controller';
 import { EquipmentController } from '../controllers/equipment.controller';
 import { PaymentController } from '../controllers/payment.controller';
 import { requireAuth, requireRole, optionalAuth } from '../middleware/auth.middleware';
+import { bookingLimiter } from '../middleware/security.middleware';
 
 const router = Router();
 const bookingController = new BookingController();
@@ -15,7 +16,7 @@ router.get('/promotions/validate', equipmentController.validatePromotion);
 router.post('/bookings/calculate-price', optionalAuth, bookingController.calculatePrice);
 
 // Protected Booking Endpoints (BR1: ต้อง Login)
-router.post('/bookings', requireAuth, bookingController.createBooking);
+router.post('/bookings', requireAuth, bookingLimiter, bookingController.createBooking);
 router.get('/bookings/my', requireAuth, bookingController.getMyBookings);
 router.get('/bookings/:id', requireAuth, bookingController.getBookingById);
 router.get('/bookings/:id/payments', requireAuth, paymentController.getPaymentsByBooking);

@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { getMyNotificationsApi, markNotificationReadApi } from '../services/payment';
 import { Bell, LogOut, Menu, ShieldCheck, X } from 'lucide-react';
 import { formatDateTime } from './ui/format';
+import { BRAND_NAME } from '../config/brand';
 
 export const BrandMark: React.FC<{ subtitle?: string; compact?: boolean }> = ({ subtitle = 'ศูนย์กีฬาและบริการยืมอุปกรณ์ออนไลน์', compact }) => (
   <div className="flex items-center gap-3">
@@ -13,7 +14,7 @@ export const BrandMark: React.FC<{ subtitle?: string; compact?: boolean }> = ({ 
     </div>
     {!compact && (
       <div className="leading-tight">
-        <div className="whitespace-nowrap text-lg font-bold text-forest-950">Barbie Sports Arena</div>
+        <div className="whitespace-nowrap text-lg font-bold text-forest-950">{BRAND_NAME}</div>
         <div className="whitespace-nowrap text-[10px] text-slate-500">{subtitle}</div>
       </div>
     )}
@@ -216,7 +217,7 @@ export const Footer: React.FC = () => (
   <footer className="mt-16 bg-panel/70">
     <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-8 sm:px-6 md:flex-row md:items-center md:justify-between lg:px-8">
       <div>
-        <div className="text-lg font-bold text-forest-950">Barbie Sports Arena</div>
+        <div className="text-lg font-bold text-forest-950">{BRAND_NAME}</div>
         <div className="text-xs text-slate-500">ระบบบริการจองคอร์ทกีฬาและจัดการยืม-คืนอุปกรณ์ดิจิทัลครบวงจร</div>
       </div>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-medium text-slate-600">
@@ -226,7 +227,7 @@ export const Footer: React.FC = () => (
         <span className="text-slate-300">•</span>
         <span>ติดต่อเจ้าหน้าที่เคาน์เตอร์กีฬา</span>
       </div>
-      <div className="text-xs text-slate-500">© 2026 Barbie Sports Arena. สงวนลิขสิทธิ์ทุกประการ</div>
+      <div className="text-xs text-slate-500">© 2026 {BRAND_NAME}. สงวนลิขสิทธิ์ทุกประการ</div>
     </div>
   </footer>
 );

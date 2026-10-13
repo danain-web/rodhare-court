@@ -66,6 +66,10 @@ export const errorHandler = (err: any, _req: Request, res: Response, _next: Next
         statusCode = 409;
         message = constraintMessage(err.constraint) || `ข้อมูลซ้ำกับที่มีอยู่แล้ว (${err.constraint || 'unique constraint'})`;
         break;
+      case '23P01': // exclusion_violation — ex_bk_no_overlap (จองซ้อนที่ระดับฐานข้อมูล)
+        statusCode = 409;
+        message = 'ไม่สามารถจองได้ ช่วงเวลานี้ถูกจองแล้ว กรุณาเลือกช่วงเวลาอื่น';
+        break;
       case '23514': // check_violation
         statusCode = 400;
         message = constraintMessage(err.constraint) || `ข้อมูลผิดกฎของระบบ (${err.constraint || 'check constraint'})`;
@@ -100,17 +104,33 @@ export const errorHandler = (err: any, _req: Request, res: Response, _next: Next
           message = 'ไม่สามารถเชื่อมต่อฐานข้อมูล PostgreSQL ได้';
         } else {
           statusCode = 500;
-          message = `Database Error: ${err.message}`;
         }
     }
   } else if (typeof err?.code === 'string' && PG_CONNECTION_ERRORS.includes(err.code)) {
     statusCode = 503;
     message = 'ไม่สามารถเชื่อมต่อฐานข้อมูล PostgreSQL ได้';
-  } else if (err?.message) {
-    message = err.message;
+  } else if (typeof err?.status === 'number' && err.status >= 400 && err.status < 500) {
+    // error จาก middleware มาตรฐาน (เช่น body-parser) ที่มี status ชัดเจน
+    statusCode = err.status;
+    message = err.expose && err.message ? err.message : 'คำขอไม่ถูกต้อง';
   }
 
-  if (statusCode >= 500) console.error('[ERROR]', err);
+  // 5xx: ข้อความภายใน (SQL, stack, ชื่อตาราง) เก็บใน log เท่านั้น — client ได้ข้อความทั่วไป + requestId ไว้แจ้งผู้ดูแล
+  const requestId = (_req as any).id as string | undefined;
+  if (statusCode >= 500) {
+    if (!(err instanceof AppError) || statusCode === 500) message = 'เกิดข้อผิดพลาดภายในระบบ กรุณาลองใหม่อีกครั้ง';
+    console.error(JSON.stringify({
+      level: 'error',
+      requestId,
+      method: _req.method,
+      path: _req.originalUrl.split('?')[0],
+      statusCode,
+      error: err?.name,
+      code: err?.code,
+      message: err?.message,
+      stack: process.env.NODE_ENV === 'production' ? undefined : err?.stack,
+    }));
+  }
 
   res.status(statusCode).json({
     status: 'error',
@@ -118,7 +138,7 @@ export const errorHandler = (err: any, _req: Request, res: Response, _next: Next
     statusCode,
     message,
     error: message,
+    ...(requestId && { requestId }),
     ...(details && { details }),
-    ...(process.env.NODE_ENV === 'development' && statusCode >= 500 && err?.stack && { stack: err.stack }),
   });
 };

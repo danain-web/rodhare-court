@@ -10,7 +10,8 @@ import { AppError } from '../utils/appError';
 // =====================================================================
 export const pool = new Pool({
   connectionString: config.databaseUrl,
-  ssl: { rejectUnauthorized: false }, // จำเป็นสำหรับ Supabase (SSL required)
+  // Supabase บังคับ SSL · ฐานข้อมูลทดสอบในเครื่อง (embedded PostgreSQL) ไม่มี SSL → DATABASE_SSL=false
+  ssl: config.databaseSsl ? { rejectUnauthorized: false } : false,
   max: 10,            // จำนวน connection สูงสุดใน pool
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 5000,
@@ -69,7 +70,8 @@ export const withTransaction = async <T>(
   _actorId?: number | null
 ): Promise<T> => {
   const client = await pool.connect().catch((err) => {
-    throw new AppError(`ไม่สามารถเชื่อมต่อฐานข้อมูล PostgreSQL ได้ (${(err as Error).message})`, 503);
+    console.error('[db] connect failed:', (err as Error).message);
+    throw new AppError('ไม่สามารถเชื่อมต่อฐานข้อมูลได้ชั่วคราว กรุณาลองใหม่อีกครั้ง', 503);
   });
   try {
     // SET LOCAL มีผลเฉพาะใน Transaction นี้ → ใช้ได้กับ Supabase Transaction pooler (ค่า SET แบบ session ไม่คงอยู่)

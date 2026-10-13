@@ -1,5 +1,5 @@
 import api from './api';
-import { Payment, Receipt, NotificationItem, SlipVerification, SubmitPaymentResult } from '../types/payment';
+import { Payment, PaymentInstructions, Receipt, NotificationItem, SlipVerification, SubmitPaymentResult } from '../types/payment';
 
 // =====================================================================
 // ส่งสลิปชำระเงิน — ใช้ multipart/form-data + Multer (Buffer)
@@ -9,20 +9,18 @@ import { Payment, Receipt, NotificationItem, SlipVerification, SubmitPaymentResu
 // =====================================================================
 export const submitPaymentApi = async (data: {
   bookingId: number;
-  amount: number;
-  paymentMethod?: string;
-  slipFile?: File;           // File object จาก <input type="file">
-  slipUrl?: string;          // fallback ถ้าไม่มีไฟล์
-  slipReference?: string;
+  amount: string;            // ส่งตามที่ผู้ใช้กรอก (ตรวจรูปแบบแล้ว) — backend ตรวจซ้ำและเทียบกับยอดในฐานข้อมูล
+  paymentMethod: string;
+  slipFile: File;            // File object จาก <input type="file"> (บังคับ)
+  slipReference: string;     // เลขอ้างอิงจากสลิปจริง (บังคับ)
 }): Promise<SubmitPaymentResult> => {
   const form = new FormData();
   form.append('bookingId', String(data.bookingId));
-  form.append('amount', String(data.amount));
-  form.append('paymentMethod', data.paymentMethod || 'PROMPTPAY');
-  if (data.slipReference) form.append('slipReference', data.slipReference);
-  if (data.slipUrl) form.append('slipUrl', data.slipUrl);
+  form.append('amount', data.amount);
+  form.append('paymentMethod', data.paymentMethod);
+  form.append('slipReference', data.slipReference);
   // field ชื่อ 'slip' ตรงกับ upload.single('slip') ใน Backend
-  if (data.slipFile) form.append('slip', data.slipFile);
+  form.append('slip', data.slipFile);
 
   const response = await api.post('/payments', form, {
     // ไม่ต้องตั้ง Content-Type เอง: Axios + FormData จะ set multipart/form-data + boundary อัตโนมัติ
@@ -39,6 +37,12 @@ export const submitPaymentApi = async (data: {
 };
 
 type SlipVerificationResponse = Pick<SlipVerification, 'result' | 'message' | 'checks' | 'receipt'> & { payment: Payment };
+
+// ยอดที่ต้องโอน (จากฐานข้อมูล) + บัญชีรับเงินจริง + PromptPay payload
+export const getPaymentInstructionsApi = async (bookingId: number): Promise<PaymentInstructions> => {
+  const response = await api.get(`/payments/instructions/${bookingId}`);
+  return response.data.data;
+};
 
 export const getPendingPaymentsApi = async (): Promise<Payment[]> => {
   const response = await api.get('/staff/payments/pending');

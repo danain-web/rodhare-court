@@ -39,6 +39,8 @@ import {
   Wifi,
   Wind,
 } from 'lucide-react';
+import { BRAND_NAME } from '../config/brand';
+import { loginUrlWithRedirect } from '../utils/redirect';
 
 const DAYS = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
 
@@ -111,11 +113,9 @@ export const CourtDetailPage: React.FC = () => {
 
   const handleProceedBooking = () => {
     if (!range) return;
-    if (!isAuthenticated) {
-      navigate('/login');
-      return;
-    }
-    navigate(`/booking?courtId=${courtId}&date=${selectedDate}&slot=${range.start}-${range.end}`);
+    const bookingUrl = `/booking?courtId=${courtId}&date=${selectedDate}&slot=${range.start}-${range.end}`;
+    // ยังไม่ Login → ไปหน้า Login แล้วพากลับมาที่ช่วงเวลาที่เลือกไว้
+    navigate(isAuthenticated ? bookingUrl : loginUrlWithRedirect(bookingUrl));
   };
 
   if (isLoadingCourt) {
@@ -192,7 +192,7 @@ export const CourtDetailPage: React.FC = () => {
           </div>
           <div className="absolute inset-x-6 bottom-6 space-y-2 text-white">
             <div className="flex items-center gap-2 text-xs text-mint-200">
-              <MapPin className="h-3.5 w-3.5" /> {court.locationDetails || 'Barbie Sports Arena'}
+              <MapPin className="h-3.5 w-3.5" /> {court.locationDetails || BRAND_NAME}
             </div>
             <h1 className="text-3xl font-bold text-white md:text-4xl">{court.name}</h1>
             <p className="text-sm text-white/80">สนามมาตรฐานพร้อมระบบตรวจสอบสถานะการจองแบบ Real-time จากฐานข้อมูล ไม่มีการจองซ้อน</p>

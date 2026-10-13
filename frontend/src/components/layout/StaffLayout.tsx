@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { BrandMark, NotificationBell, UserChip } from '../Navbar';
+import { BRAND_NAME } from '../../config/brand';
 
 interface Item {
   to: string;
@@ -126,7 +127,7 @@ export const StaffLayout: React.FC<{ children: React.ReactNode }> = ({ children 
               <button className="rounded-xl p-2 text-forest-900 hover:bg-panel lg:hidden" onClick={() => setOpen(true)} aria-label="เมนู">
                 {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
               </button>
-              <div className="text-base font-bold text-forest-950 sm:text-lg">Barbie Sports Arena Staff & Admin Console</div>
+              <div className="text-base font-bold text-forest-950 sm:text-lg">{BRAND_NAME} Staff & Admin Console</div>
               <span className="badge-mint hidden md:inline-flex">
                 <span className="h-1.5 w-1.5 rounded-full bg-mint-500" /> PRODUCTION NODE
               </span>

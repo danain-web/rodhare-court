@@ -7,10 +7,8 @@ const PORT = config.port;
 const bookingService = new BookingService();
 
 const startServer = async () => {
+  // ค่า environment ถูกตรวจใน config/env.ts (validateConfig) แล้ว — ถ้าผิด process จะหยุดก่อนถึงบรรทัดนี้
   console.log('🚀 Initializing server setup...');
-  if (config.jwtSecret === 'default_jwt_secret' || config.jwtSecret === 'your_jwt_secret') {
-    console.warn('⚠️  JWT_SECRET ยังเป็นค่าตัวอย่าง ควรตั้งค่าใหม่ในไฟล์ .env ก่อนใช้งานจริง');
-  }
 
   // ถ้าฐานข้อมูลยังไม่พร้อม server ยังเปิดได้ และจะเชื่อมต่อใหม่อัตโนมัติเมื่อมี request
   await initDbPool();

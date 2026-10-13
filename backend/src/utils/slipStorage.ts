@@ -15,8 +15,7 @@ export type SlipMimeType = (typeof SLIP_ALLOWED_TYPES)[number];
 const EXT: Record<SlipMimeType, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
 
 export interface StoredSlip {
-  url: string;         // Public URL จาก Supabase Storage
-  storagePath: string; // path ภายใน bucket (ใช้ลบทีหลัง)
+  storagePath: string; // path ภายใน bucket (เก็บค่านี้ใน payments.slip_url — ไม่ใช่ public URL)
   mimeType: SlipMimeType;
   size: number;
   width?: number;
@@ -96,9 +95,10 @@ export const validateSlipBuffer = (buffer: Buffer, declaredMime: string): {
 };
 
 // =====================================================================
-// uploadSlipToSupabase — อัปโหลด buffer ขึ้น Supabase Storage
+// uploadSlipToSupabase — อัปโหลด buffer ขึ้น Supabase Storage (bucket แบบ private)
 // เหตุผล: ไฟล์เก็บใน Cloud Storage → ไม่หายเมื่อ Render restart container
-//         Frontend และ Staff สามารถดูรูปสลิปผ่าน URL ได้โดยตรง
+//         ชื่อไฟล์สร้างจากค่าที่ server ควบคุมทั้งหมด (ไม่ใช้ชื่อไฟล์จาก client → กัน path traversal)
+//         สลิปเป็นข้อมูลส่วนบุคคล จึงไม่สร้าง public URL — ดูผ่าน createSignedSlipUrls เท่านั้น
 // =====================================================================
 export const uploadSlipToSupabase = async (
   bookingId: number,
@@ -115,14 +115,12 @@ export const uploadSlipToSupabase = async (
     });
 
   if (error) {
-    throw AppError.internal(`อัปโหลดสลิปไม่สำเร็จ: ${error.message}`);
+    // รายละเอียดเก็บใน server log เท่านั้น ไม่ส่งข้อความภายในของ Storage กลับไปที่ client
+    console.error('[slip] upload failed:', error.message);
+    throw new AppError('อัปโหลดสลิปไม่สำเร็จ ระบบจัดเก็บไฟล์ขัดข้องชั่วคราว กรุณาลองใหม่อีกครั้ง', 503);
   }
 
-  // สร้าง Public URL (bucket ต้องตั้งเป็น public ใน Supabase Dashboard)
-  const { data } = supabaseAdmin.storage.from(bucket).getPublicUrl(fileName);
-
   return {
-    url: data.publicUrl,
     storagePath: fileName,
     mimeType: slip.mimeType,
     size: slip.buffer.length,
@@ -141,14 +139,51 @@ export const deleteSlipFromSupabase = async (storagePath: string): Promise<void>
 };
 
 // =====================================================================
-// extractStoragePath — แยก path จาก Public URL
+// extractStoragePath — แยก path จาก Public URL (ข้อมูลเก่าที่เคยเก็บเป็น public URL)
 // =====================================================================
 export const extractStoragePath = (publicUrl: string): string => {
   try {
     const url = new URL(publicUrl);
     const parts = url.pathname.split(`/object/public/${config.supabase.bucketName}/`);
-    return parts[1] ?? '';
+    return parts[1] ? decodeURIComponent(parts[1]) : '';
   } catch {
     return '';
   }
+};
+
+// ค่าใน payments.slip_url: ข้อมูลใหม่ = path ใน bucket · ข้อมูลเก่า = public URL ของ bucket เดียวกัน
+// URL ภายนอกอื่น ๆ (เช่น ลิงก์ที่ client เคยส่งมาเอง) คืน '' → ไม่แสดง
+export const toStoragePath = (stored: string): string => {
+  const value = stored.trim();
+  if (!value) return '';
+  if (/^https?:\/\//i.test(value)) return extractStoragePath(value);
+  return /^slips\/[A-Za-z0-9._-]+$/.test(value) ? value : '';
+};
+
+// =====================================================================
+// createSignedSlipUrls — สร้าง Signed URL อายุสั้นให้ผู้ที่ผ่านการตรวจสิทธิ์แล้วเท่านั้น
+// ผู้เรียก (service) ต้องตรวจก่อนว่าผู้ใช้เป็นเจ้าของการจอง หรือเป็นพนักงานที่มีสิทธิ์
+// คืน Map: ค่าเดิมใน slip_url → signed URL (ค่าที่สร้างไม่ได้จะไม่อยู่ใน Map)
+// =====================================================================
+export const createSignedSlipUrls = async (storedValues: string[]): Promise<Map<string, string>> => {
+  const result = new Map<string, string>();
+  const byPath = new Map<string, string[]>();
+  for (const stored of storedValues) {
+    const p = toStoragePath(stored);
+    if (p) byPath.set(p, [...(byPath.get(p) ?? []), stored]);
+  }
+  if (!byPath.size) return result;
+
+  const { data, error } = await supabaseAdmin.storage
+    .from(config.supabase.bucketName)
+    .createSignedUrls([...byPath.keys()], config.supabase.signedUrlTtlSeconds);
+  if (error || !data) {
+    console.error('[slip] createSignedUrls failed:', error?.message);
+    return result;
+  }
+  for (const item of data) {
+    if (!item.path || !item.signedUrl || item.error) continue;
+    for (const stored of byPath.get(item.path) ?? []) result.set(stored, item.signedUrl);
+  }
+  return result;
 };

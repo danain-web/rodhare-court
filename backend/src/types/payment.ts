@@ -80,16 +80,15 @@ export interface AuditLogDTO {
 
 export interface CreatePaymentInput {
   bookingId: number;
-  amount: number;
-  paymentMethod: 'PROMPTPAY' | 'BANK_TRANSFER' | 'SLIP_TRANSFER' | 'CASH';
-  // Multer Memory Storage buffer (multipart/form-data upload)
-  slipBuffer?: Buffer;
-  slipMimeType?: string;
-  slipUrl?: string;       // Fallback: ถ้าไม่ได้แนบไฟล์ ให้ส่ง URL รูปแทนได้
-  slipReference?: string;
+  amount: number;          // ยอดตามที่ลูกค้าอ่านจากสลิป — ใช้เทียบกับยอดที่ backend คำนวณเท่านั้น
+  paymentMethod: 'PROMPTPAY' | 'BANK_TRANSFER' | 'SLIP_TRANSFER';
+  // Multer Memory Storage buffer (multipart/form-data upload) — บังคับแนบไฟล์เสมอ
+  slipBuffer: Buffer;
+  slipMimeType: string;
+  slipReference: string;   // ผ่าน normalizeSlipRef + SLIP_REF_RE แล้ว
 }
 
-// ผลการตรวจสลิปอัตโนมัติ (Auto-Slip Verification)
+// ผลการตรวจสลิปเบื้องต้น (ข้อมูลประกอบให้พนักงาน — ไม่ใช่หลักฐานว่าเงินเข้าบัญชีแล้ว)
 export interface SlipCheck {
   code: 'FILE' | 'DUPLICATE' | 'AMOUNT' | 'READABLE';
   label: string;
@@ -97,8 +96,21 @@ export interface SlipCheck {
   detail: string;
 }
 
+// ข้อมูลสำหรับโอนเงิน (GET /api/payments/instructions/:bookingId)
+export interface PaymentInstructions {
+  bookingNumber: string;
+  amount: number;            // ยอดจาก bookings.final_amount
+  configured: boolean;       // false = ยังไม่ได้ตั้งบัญชีรับเงินใน env
+  accountName?: string;
+  promptPay?: { maskedId: string; payload: string };
+  bank?: { bankName: string; accountNo: string };
+}
+
+// ระบบไม่มี API ตรวจการโอนจากธนาคาร จึงไม่อนุมัติอัตโนมัติ:
+//   REJECTED      = ปฏิเสธทันที (สลิปซ้ำ / ยอดไม่ตรง) ส่งใหม่ได้
+//   MANUAL_REVIEW = รับสลิปแล้ว รอพนักงานยืนยันยอดเงินเข้าบัญชี (payment.status = PENDING)
 export interface SlipVerificationResult {
-  result: 'VERIFIED' | 'REJECTED' | 'MANUAL_REVIEW';
+  result: 'REJECTED' | 'MANUAL_REVIEW';
   message: string;
   checks: SlipCheck[];
   payment: PaymentDTO;

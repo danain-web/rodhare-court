@@ -4,7 +4,6 @@ import { availabilitySchema, loginSchema, registerSchema } from '../validators/a
 import { sendSuccess } from '../utils/response';
 import { currentUser } from './helpers';
 import { COOKIE_NAME, cookieOptions } from '../utils/jwt';
-import { config } from '../config/env';
 
 export class AuthController {
   private authService = new AuthService();
@@ -17,8 +16,7 @@ export class AuthController {
   login = async (req: Request, res: Response) => {
     const input = loginSchema.parse(req.body);
     const result = await this.authService.login(input, req.ip || req.socket.remoteAddress, req.get('User-Agent'));
-    const isDev = config.nodeEnv === 'development';
-    res.cookie(COOKIE_NAME, result.token, cookieOptions(isDev));
+    res.cookie(COOKIE_NAME, result.token, cookieOptions());
     // ไม่ส่ง token ใน response body → Frontend ใช้ Cookie โดยอัตโนมัติ
     return sendSuccess(res, { user: result.user }, 'เข้าสู่ระบบสำเร็จ');
   };
@@ -29,8 +27,7 @@ export class AuthController {
   register = async (req: Request, res: Response) => {
     const input = registerSchema.parse(req.body);
     const result = await this.authService.register(input, req.ip || req.socket.remoteAddress, req.get('User-Agent'));
-    const isDev = config.nodeEnv === 'development';
-    res.cookie(COOKIE_NAME, result.token, cookieOptions(isDev));
+    res.cookie(COOKIE_NAME, result.token, cookieOptions());
     return sendSuccess(res, { user: result.user }, 'สมัครสมาชิกสำเร็จ', 201);
   };
 
@@ -50,7 +47,7 @@ export class AuthController {
     const user = currentUser(req);
     await this.authService.logout(user.sessionId, user.userId);
     // ลบ Cookie โดย set maxAge = 0
-    res.clearCookie(COOKIE_NAME, { ...cookieOptions(config.nodeEnv === 'development'), maxAge: 0 });
+    res.clearCookie(COOKIE_NAME, { ...cookieOptions(), maxAge: undefined });
     return sendSuccess(res, { success: true }, 'ออกจากระบบสำเร็จ');
   };
 

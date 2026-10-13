@@ -47,4 +47,28 @@ export const deleteTestUsers = async (usernames: string[]) => {
   await pool.query('DELETE FROM users WHERE username = ANY($1::text[])', [usernames]);
 };
 
+// login ด้วยบัญชีจาก seed (รหัสผ่าน Password123!) คืน cookie
+export const loginAs = async (identifier: string): Promise<string[]> => {
+  const res = await request(app).post('/api/auth/login').send({ identifier, password: 'Password123!' });
+  if (res.status !== 200) throw new Error(`login ${identifier} failed: ${res.status} ${JSON.stringify(res.body)}`);
+  return getSetCookies(res);
+};
+
+// เลขอ้างอิงสลิปไม่ซ้ำ (รูปแบบ A-Z0-9 8–30 ตัว) — ข้อมูลทดสอบเท่านั้น
+let refSeq = 0;
+export const uniqueSlipRef = (prefix = 'T') => `${prefix}${Date.now()}${++refSeq}`.toUpperCase().slice(0, 30);
+
+// วันที่ล่วงหน้า N วัน (YYYY-MM-DD ตามเวลาไทย)
+export const futureDate = (days: number) => {
+  const d = new Date(Date.now() + days * 86_400_000);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
+// PNG ที่ magic bytes ถูกต้องและใหญ่กว่า 1 KB (ใช้เป็นไฟล์สลิปทดสอบ)
+export const TINY_PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
+  'base64'
+);
+export const VALID_PNG = Buffer.concat([TINY_PNG, Buffer.alloc(2048)]);
+
 export { app, pool };

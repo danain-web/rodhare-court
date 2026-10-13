@@ -1,24 +1,13 @@
 import request from 'supertest';
-import { app, pool, registerAndGetCookie, deleteTestUsers } from './helpers';
+import { app, pool, registerAndGetCookie, deleteTestUsers, uniqueSlipRef, TINY_PNG, VALID_PNG } from './helpers';
 
 // =====================================================================
-// Core Flow #2: ส่งสลิปชำระเงิน (multipart/form-data) + In-App Notification
-// จุดที่ต้องการพิสูจน์:
-//   1) Endpoint ชำระเงินต้อง Login ก่อน (ไม่มี Cookie → 401)
-//   2) Backend ตรวจข้อมูลฟอร์มก่อนแตะ DB / Storage (bookingId, amount, paymentMethod, ไฟล์สลิป)
-//   3) Multer ปฏิเสธไฟล์ที่ไม่ใช่รูปภาพ (กันอัปโหลดไฟล์อันตราย)
-//   4) จ่ายเงินให้การจองของคนอื่น / การจองที่ไม่มีอยู่จริงไม่ได้
-//   5) ดึงรายการแจ้งเตือนของตัวเองได้ (In-App Notification)
-// หมายเหตุ: เทสต์นี้ไม่อัปโหลดไฟล์ขึ้น Supabase Storage จริง (กันขยะใน bucket)
+// Payment: ตรวจข้อมูลฟอร์มส่งสลิป (multipart/form-data) ก่อนแตะฐานข้อมูล/Storage
+//   1) ต้อง Login
+//   2) ไฟล์: ต้องแนบ · เป็นรูปจริง (magic bytes) · ขนาดสมเหตุสมผล
+//   3) ฟอร์ม: จำนวนเงินรูปแบบเงินบาทเท่านั้น · เลขอ้างอิงจริง · ไม่รับ field แปลกปลอม (mass assignment)
+//   4) การจองที่ไม่มีอยู่ → 404
 // =====================================================================
-
-// PNG ขนาด 1x1 pixel (magic bytes ถูกต้อง) — เล็กกว่า 1 KB จึงถูก Backend ปฏิเสธว่าเป็นไฟล์เสีย
-const TINY_PNG = Buffer.from(
-  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
-  'base64'
-);
-// PNG เดิมเติม padding ให้เกิน 1 KB → ผ่านการตรวจขนาด/magic bytes ใช้เป็นสลิปทดสอบที่ "ถูกต้อง"
-const VALID_PNG = Buffer.concat([TINY_PNG, Buffer.alloc(2048)]);
 
 const createdUsernames: string[] = [];
 let cookies: string[] = [];
@@ -34,88 +23,81 @@ afterAll(async () => {
   await pool.end();
 });
 
-describe('Payment Flow (Upload Slip via multipart/form-data)', () => {
-  it('POST /api/payments ไม่มี Cookie → 401', async () => {
-    const res = await request(app)
-      .post('/api/payments')
-      .field('bookingId', '1')
-      .field('amount', '100')
-      .field('paymentMethod', 'PROMPTPAY')
-      .attach('slip', VALID_PNG, { filename: 'slip.png', contentType: 'image/png' });
+// ฟอร์มที่ถูกต้องทุกช่อง แล้วค่อยเปลี่ยนทีละช่องในแต่ละเทสต์
+const submit = (fields: Record<string, string>, file: { buf: Buffer; type: string; name?: string } | null = { buf: VALID_PNG, type: 'image/png' }, auth = true) => {
+  let req = request(app).post('/api/payments');
+  if (auth) req = req.set('Cookie', cookies);
+  const base = { bookingId: '999999999', amount: '100', paymentMethod: 'PROMPTPAY', slipReference: uniqueSlipRef(), ...fields };
+  for (const [k, v] of Object.entries(base)) req = req.field(k, v);
+  if (file) req = req.attach('slip', file.buf, { filename: file.name ?? 'slip.png', contentType: file.type });
+  return req;
+};
+
+describe('Payment form validation', () => {
+  it('ไม่มี Cookie → 401', async () => {
+    const res = await submit({}, undefined, false);
     expect(res.status).toBe(401);
   });
 
-  it('POST /api/payments ไม่แนบสลิป → 400', async () => {
-    const res = await request(app)
-      .post('/api/payments')
-      .set('Cookie', cookies)
-      .field('bookingId', '1')
-      .field('amount', '100')
-      .field('paymentMethod', 'PROMPTPAY');
+  it('ไม่แนบไฟล์สลิป → 400', async () => {
+    const res = await submit({}, null);
     expect(res.status).toBe(400);
     expect(res.body.message).toMatch(/สลิป/);
   });
 
-  it('POST /api/payments paymentMethod ไม่ถูกต้อง → 400', async () => {
-    const res = await request(app)
-      .post('/api/payments')
-      .set('Cookie', cookies)
-      .field('bookingId', '1')
-      .field('amount', '100')
-      .field('paymentMethod', 'BITCOIN')
-      .attach('slip', VALID_PNG, { filename: 'slip.png', contentType: 'image/png' });
+  it('paymentMethod ไม่ถูกต้อง → 400', async () => {
+    const res = await submit({ paymentMethod: 'BITCOIN' });
     expect(res.status).toBe(400);
     expect(res.body.message).toMatch(/paymentMethod/);
   });
 
-  it('POST /api/payments แนบไฟล์ที่ไม่ใช่รูปภาพ → 400 (Multer fileFilter)', async () => {
-    const res = await request(app)
-      .post('/api/payments')
-      .set('Cookie', cookies)
-      .field('bookingId', '1')
-      .field('amount', '100')
-      .field('paymentMethod', 'PROMPTPAY')
-      .attach('slip', Buffer.from('#!/bin/sh\necho hacked'), { filename: 'evil.sh', contentType: 'application/x-sh' });
+  it('ไฟล์ที่ไม่ใช่รูปภาพ → 400 (Multer fileFilter)', async () => {
+    const res = await submit({}, { buf: Buffer.from('#!/bin/sh\necho hacked'), type: 'application/x-sh', name: 'evil.sh' });
     expect(res.status).toBe(400);
     expect(res.body.message).toMatch(/JPG, PNG, WEBP/);
   });
 
-  it('POST /api/payments ไฟล์รูปเล็กผิดปกติ (< 1 KB) → 400', async () => {
-    const res = await request(app)
-      .post('/api/payments')
-      .set('Cookie', cookies)
-      .field('bookingId', '1')
-      .field('amount', '100')
-      .field('paymentMethod', 'PROMPTPAY')
-      .attach('slip', TINY_PNG, { filename: 'slip.png', contentType: 'image/png' });
+  it('ไฟล์รูปเล็กผิดปกติ (< 1 KB) → 400', async () => {
+    const res = await submit({}, { buf: TINY_PNG, type: 'image/png' });
     expect(res.status).toBe(400);
     expect(res.body.message).toMatch(/เล็กเกินไป/);
   });
 
-  it('POST /api/payments ปลอม Content-Type เป็น image/png แต่เนื้อไฟล์ไม่ใช่รูป → 400 (ตรวจ magic bytes)', async () => {
+  it('ปลอม Content-Type เป็น image/png แต่เนื้อไฟล์ไม่ใช่รูป → 400 (ตรวจ magic bytes)', async () => {
     const fake = Buffer.concat([Buffer.from('<script>alert(1)</script>'), Buffer.alloc(2048, 0x20)]);
-    const res = await request(app)
-      .post('/api/payments')
-      .set('Cookie', cookies)
-      .field('bookingId', '1')
-      .field('amount', '100')
-      .field('paymentMethod', 'PROMPTPAY')
-      .attach('slip', fake, { filename: 'slip.png', contentType: 'image/png' });
+    const res = await submit({}, { buf: fake, type: 'image/png' });
     expect(res.status).toBe(400);
   });
 
-  it('POST /api/payments กับการจองที่ไม่มีอยู่/ไม่ใช่ของตัวเอง → 4xx (ไม่สร้าง payment)', async () => {
-    const res = await request(app)
-      .post('/api/payments')
-      .set('Cookie', cookies)
-      .field('bookingId', '999999999')
-      .field('amount', '100')
-      .field('paymentMethod', 'PROMPTPAY')
-      .attach('slip', VALID_PNG, { filename: 'slip.png', contentType: 'image/png' });
-    expect([403, 404]).toContain(res.status);
-    expect(res.body.success).toBe(false);
+  it.each(['Infinity', 'NaN', '12abc', '-5', '0', '1e3', '10.999', '', ' '])('จำนวนเงิน "%s" → 400', async (amount) => {
+    const res = await submit({ amount });
+    expect(res.status).toBe(400);
   });
 
+  it.each(['', 'ABC', 'REF-<script>', 'X'.repeat(31)])('เลขอ้างอิง "%s" ไม่ถูกต้อง → 400', async (slipReference) => {
+    const res = await submit({ slipReference });
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/อ้างอิง/);
+  });
+
+  it('ส่ง field แปลกปลอม (status=VERIFIED) → 400 ไม่ยอมรับ (mass assignment)', async () => {
+    const res = await submit({ status: 'VERIFIED' });
+    expect(res.status).toBe(400);
+  });
+
+  it('ส่งลิงก์รูปแทนไฟล์ (slipUrl) → 400 ไม่รองรับแล้ว', async () => {
+    const res = await submit({ slipUrl: 'https://evil.example/track.png' }, null);
+    expect(res.status).toBe(400);
+  });
+
+  it('การจองที่ไม่มีอยู่ → 404 (ไม่สร้าง payment)', async () => {
+    const res = await submit({});
+    expect(res.status).toBe(404);
+    expect(res.body.success).toBe(false);
+  });
+});
+
+describe('Notifications', () => {
   it('GET /api/notifications/my → 200 ได้ array การแจ้งเตือนของตัวเอง', async () => {
     const res = await request(app).get('/api/notifications/my').set('Cookie', cookies);
     expect(res.status).toBe(200);

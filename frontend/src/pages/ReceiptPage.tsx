@@ -6,6 +6,7 @@ import { getBookingByIdApi } from '../services/booking';
 import { CustomerLayout } from '../components/layout/CustomerLayout';
 import { Breadcrumb, EmptyState, LoadingState, formatDateTime, formatTHB, formatThaiDate } from '../components/ui';
 import { ArrowLeft, BadgeCheck, CheckCircle2, Clock, LogIn, Printer, QrCode, ReceiptText, RotateCcw, ShieldCheck, Undo2 } from 'lucide-react';
+import { BRAND_NAME } from '../config/brand';
 
 const minusMinutes = (time?: string, minutes = 30) => {
   if (!time) return '-';
@@ -171,7 +172,7 @@ export const ReceiptPage: React.FC = () => {
             <div className="grid gap-4 rounded-2xl bg-panel p-5 text-xs sm:grid-cols-2">
               <div>
                 <div className="text-[10px] font-semibold uppercase text-slate-500">ผู้ออกเอกสาร (Issuer)</div>
-                <div className="text-sm font-semibold text-forest-950">Barbie Sports Arena</div>
+                <div className="text-sm font-semibold text-forest-950">{BRAND_NAME}</div>
                 <div className="text-slate-500">ออกโดย: {r.issuedByName || '-'}{r.verificationMethod === 'AUTO' ? ' (ตรวจสลิปอัตโนมัติ)' : ''}</div>
               </div>
               <div className="space-y-1">
@@ -260,7 +261,7 @@ export const ReceiptPage: React.FC = () => {
                   <br />
                   PAID
                 </div>
-                เอกสารนี้ออกโดยระบบอิเล็กทรอนิกส์ของ Barbie Sports Arena
+                เอกสารนี้ออกโดยระบบอิเล็กทรอนิกส์ของ {BRAND_NAME}
               </div>
               <button onClick={handlePrint} className="btn-soft print:hidden">
                 <Printer className="h-4 w-4" /> พิมพ์ใบเสร็จ

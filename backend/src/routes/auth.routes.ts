@@ -1,24 +1,12 @@
 import { Router } from 'express';
 import { AuthController } from '../controllers/auth.controller';
 import { requireAuth } from '../middleware/auth.middleware';
-import rateLimit from 'express-rate-limit';
+import { authLimiter } from '../middleware/security.middleware';
 
 const router = Router();
 const authController = new AuthController();
 
-// =====================================================================
-// Rate Limit: ป้องกัน Brute-force โจมตีหน้า Login/Register
-// เหตุผล: ถ้าไม่ใส่ผู้ไม่หวังดีสามารถทดลอง password ได้ไม่จำกัดครั้ง
-//         15 นาที / 20 ครั้ง เพียงพอสำหรับการใช้งานปกติ แต่ทำ brute-force ไม่ได้
-// =====================================================================
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 นาที
-  max: 20,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { success: false, message: 'พยายามเข้าสู่ระบบบ่อยเกินไป กรุณารอ 15 นาทีแล้วลองใหม่' },
-  skipSuccessfulRequests: true, // นับเฉพาะ request ที่ล้มเหลว
-});
+// Rate Limit กัน brute-force: ล้มเหลวเกิน 20 ครั้ง / 15 นาที ต่อ IP (ดู security.middleware.ts)
 
 router.post('/login',    authLimiter, authController.login);
 router.post('/register', authLimiter, authController.register);

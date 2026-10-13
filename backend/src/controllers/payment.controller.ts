@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { PaymentService } from '../services/payment.service';
-import { rejectPaymentSchema } from '../validators/payment.validator';
+import { rejectPaymentSchema, submitPaymentFormSchema } from '../validators/payment.validator';
 import { sendSuccess } from '../utils/response';
 import { parseIdParam } from '../utils/params';
 import { currentUser } from './helpers';
@@ -18,41 +18,19 @@ export class PaymentController {
   submitPayment = async (req: Request, res: Response) => {
     const user = currentUser(req);
 
-    // ตรวจว่ามีไฟล์หรือไม่ (Multer วาง file ไว้ที่ req.file)
-    const slipFile = req.file;
-
-    // รับข้อมูลจาก form fields (multipart form)
-    const bookingId = parseInt(req.body.bookingId);
-    const amount = parseFloat(req.body.amount);
-    const paymentMethod = req.body.paymentMethod;
-    const slipReference = req.body.slipReference?.trim() || undefined;
-    const slipUrl = req.body.slipUrl?.trim() || undefined;
-
-    if (!bookingId || isNaN(bookingId)) throw AppError.badRequest('bookingId ไม่ถูกต้อง');
-    if (!amount || isNaN(amount) || amount <= 0) throw AppError.badRequest('amount ไม่ถูกต้อง');
-    if (!['PROMPTPAY', 'BANK_TRANSFER', 'SLIP_TRANSFER', 'CASH'].includes(paymentMethod)) {
-      throw AppError.badRequest('paymentMethod ไม่ถูกต้อง');
-    }
-    if (!slipFile && !slipUrl) throw AppError.badRequest('กรุณาแนบสลิปโอนเงิน (ไฟล์รูปภาพ) หรือระบุ slipUrl');
+    // บังคับแนบไฟล์สลิปเสมอ (ไม่รับลิงก์รูปจาก client — URL ภายนอกตรวจเนื้อหาไม่ได้และใช้ติดตามพนักงานได้)
+    if (!req.file) throw AppError.badRequest('กรุณาแนบไฟล์รูปสลิปการโอนเงิน (JPG, PNG หรือ WEBP)');
+    const form = submitPaymentFormSchema.parse(req.body);
 
     const result = await this.paymentService.submitPayment(
       user.userId,
-      {
-        bookingId,
-        amount,
-        paymentMethod,
-        slipBuffer: slipFile?.buffer,
-        slipMimeType: slipFile?.mimetype,
-        slipUrl,
-        slipReference,
-      },
+      { ...form, slipBuffer: req.file.buffer, slipMimeType: req.file.mimetype },
       req.ip
     );
 
     const messages = {
-      VERIFIED:      'ตรวจสลิปอัตโนมัติผ่าน — การจองยืนยันแล้ว (Paid) พร้อมออกใบเสร็จ',
-      REJECTED:      'สลิปไม่ผ่านการตรวจสอบอัตโนมัติ',
-      MANUAL_REVIEW: 'ภาพสลิปไม่ชัดเจน — ส่งคิวให้พนักงานตรวจ (Inspector Console)',
+      REJECTED:      'สลิปไม่ผ่านการตรวจสอบเบื้องต้น',
+      MANUAL_REVIEW: 'ได้รับสลิปแล้ว — รอเจ้าหน้าที่ยืนยันยอดเงินเข้าบัญชี',
     };
     return sendSuccess(res, result, messages[result.result], 201);
   };
@@ -85,6 +63,12 @@ export class PaymentController {
     const user = currentUser(req);
     const payments = await this.paymentService.getPaymentsByBooking(parseIdParam(req), user.userId, user.roles);
     return sendSuccess(res, payments, 'Booking payments retrieved');
+  };
+
+  getPaymentInstructions = async (req: Request, res: Response) => {
+    const user = currentUser(req);
+    const result = await this.paymentService.getPaymentInstructions(parseIdParam(req, 'bookingId'), user.userId);
+    return sendSuccess(res, result, 'Payment instructions retrieved');
   };
 
   getMyNotifications = async (req: Request, res: Response) => {

@@ -5,6 +5,7 @@ import { ArrowRight, ImageOff, Info, MapPin, Layers } from 'lucide-react';
 import { StatusBadge } from './ui/StatusBadge';
 import { formatTHB, sportLabel } from './ui/format';
 import { AvailabilitySlot } from '../types/court';
+import { BRAND_NAME } from '../config/brand';
 
 interface CourtCardProps {
   court: Court;
@@ -68,7 +69,7 @@ export const CourtCard: React.FC<CourtCardProps> = ({ court, slots, date }) => {
         <div className="flex items-center justify-between gap-2 text-sm text-slate-600">
           <span className="flex min-w-0 items-center gap-2">
             <MapPin className="h-4 w-4 shrink-0 text-forest-600" />
-            <span className="truncate">{court.locationDetails || 'Barbie Sports Arena'}</span>
+            <span className="truncate">{court.locationDetails || BRAND_NAME}</span>
           </span>
           <span className="badge-mint shrink-0">
             <Layers className="h-3 w-3" /> {court.code}

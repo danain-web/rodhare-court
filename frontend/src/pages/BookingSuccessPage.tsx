@@ -15,6 +15,7 @@ import {
   hoursBetween,
 } from '../components/ui';
 import { ArrowRight, CalendarDays, CheckCircle2, Clock, LogIn, MapPin, Package, Pencil, Phone, ReceiptText, ShieldCheck, Undo2, X } from 'lucide-react';
+import { BRAND_NAME } from '../config/brand';
 
 // UCS-3.3 ยืนยันการจองและนับเวลาถอยหลัง 15 นาที (ขั้นตอนที่ 3 จาก 4)
 export const BookingSuccessPage: React.FC = () => {
@@ -203,7 +204,7 @@ export const BookingSuccessPage: React.FC = () => {
                 </Link>
               </div>
               <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-500">
-                <ShieldCheck className="h-3.5 w-3.5 text-mint-600" /> ข้อมูลทั้งหมดบันทึกในฐานข้อมูล Barbie Sports Arena
+                <ShieldCheck className="h-3.5 w-3.5 text-mint-600" /> ข้อมูลทั้งหมดบันทึกในระบบ {BRAND_NAME}
               </div>
             </div>
 
