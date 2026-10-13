@@ -1,5 +1,5 @@
 import api from './api';
-import { Payment, Receipt, NotificationItem, SubmitPaymentResult } from '../types/payment';
+import { Payment, Receipt, NotificationItem, SlipVerification, SubmitPaymentResult } from '../types/payment';
 
 // =====================================================================
 // ส่งสลิปชำระเงิน — ใช้ multipart/form-data + Multer (Buffer)
@@ -28,8 +28,17 @@ export const submitPaymentApi = async (data: {
     // ไม่ต้องตั้ง Content-Type เอง: Axios + FormData จะ set multipart/form-data + boundary อัตโนมัติ
     headers: { 'Content-Type': undefined },
   });
-  return response.data.data;
+
+  // Backend ส่ง { result, message, checks, payment, receipt } (SlipVerificationResult)
+  // แปลงเป็นรูปที่หน้า CustomerPaymentPage ใช้: Payment + { verification }
+  const res: SlipVerificationResponse = response.data.data;
+  return {
+    ...res.payment,
+    verification: { result: res.result, message: res.message, checks: res.checks ?? [], receipt: res.receipt },
+  };
 };
+
+type SlipVerificationResponse = Pick<SlipVerification, 'result' | 'message' | 'checks' | 'receipt'> & { payment: Payment };
 
 export const getPendingPaymentsApi = async (): Promise<Payment[]> => {
   const response = await api.get('/staff/payments/pending');
