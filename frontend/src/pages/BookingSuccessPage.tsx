@@ -50,7 +50,7 @@ export const BookingSuccessPage: React.FC = () => {
       {isPending && <CountdownBanner expiresAt={b?.holdExpiresAt} />}
       {booking?.status === 'EXPIRED' && (
         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-5 text-sm text-rose-800">
-          <strong>หมดเวลาชำระเงิน (BR3):</strong> การจองนี้ถูกยกเลิกอัตโนมัติและคืนสนาม/อุปกรณ์เข้าสู่ระบบแล้ว กรุณาทำรายการจองใหม่
+          <strong>หมดเวลาชำระเงิน:</strong> การจองนี้ถูกยกเลิกอัตโนมัติและคืนสนาม/อุปกรณ์เข้าสู่ระบบแล้ว กรุณาทำรายการจองใหม่
         </div>
       )}
 
@@ -82,7 +82,7 @@ export const BookingSuccessPage: React.FC = () => {
                       คุณ{user?.firstName} {user?.lastName}
                     </div>
                     <div className="mt-1 flex items-center gap-1 text-[11px] text-forest-700">
-                      <ShieldCheck className="h-3.5 w-3.5" /> สมาชิกสถานะปกติ (Active - BR1 Verified)
+                      <ShieldCheck className="h-3.5 w-3.5" /> สมาชิกสถานะปกติ (Active Member)
                     </div>
                   </div>
                   <div>
@@ -100,7 +100,7 @@ export const BookingSuccessPage: React.FC = () => {
                 <div className="grid gap-3 sm:grid-cols-3">
                   {[
                     { icon: <MapPin className="h-4 w-4" />, label: 'สนามที่จอง', value: booking?.courtName, sub: booking?.sportName },
-                    { icon: <CalendarDays className="h-4 w-4" />, label: 'วันที่เล่นกีฬา', value: formatThaiDate(booking?.bookingDate), sub: 'จองล่วงหน้าตามโควตา BR4' },
+                    { icon: <CalendarDays className="h-4 w-4" />, label: 'วันที่เล่นกีฬา', value: formatThaiDate(booking?.bookingDate), sub: 'จองล่วงหน้าได้ไม่เกิน 30 วัน' },
                     { icon: <Clock className="h-4 w-4" />, label: 'ช่วงเวลาที่จอง', value: `${booking?.startTime || ''} - ${booking?.endTime || ''} น.`, sub: `ระยะเวลารวม ${hours} ชั่วโมง` },
                   ].map((x) => (
                     <div key={x.label} className="flex items-start gap-3 rounded-xl border border-slate-100 p-3">
@@ -145,13 +145,13 @@ export const BookingSuccessPage: React.FC = () => {
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="rounded-xl bg-mint-50 p-4 text-xs text-forest-900">
                   <div className="mb-1 flex items-center gap-2 font-semibold">
-                    <LogIn className="h-4 w-4" /> เงื่อนไขการเช็คอิน (BR8)
+                    <LogIn className="h-4 w-4" /> เงื่อนไขการเช็คอิน
                   </div>
                   สามารถเช็คอินเข้าใช้สนามได้ก่อนเวลาเริ่มไม่เกิน 30 นาที โดยแสดง QR Code / รหัสการจองต่อเจ้าหน้าที่ที่เคาน์เตอร์
                 </div>
                 <div className="rounded-xl bg-sky-50 p-4 text-xs text-sky-900">
                   <div className="mb-1 flex items-center gap-2 font-semibold">
-                    <Undo2 className="h-4 w-4" /> เงื่อนไขการยกเลิกคืนเงิน (BR12)
+                    <Undo2 className="h-4 w-4" /> เงื่อนไขการยกเลิกคืนเงิน
                   </div>
                   ยกเลิกล่วงหน้ามากกว่า 24 ชั่วโมง ได้รับเงินคืนเต็มจำนวน 100% | ยกเลิกน้อยกว่า 24 ชั่วโมง คืนเงิน 50%
                 </div>
@@ -182,12 +182,12 @@ export const BookingSuccessPage: React.FC = () => {
                   <span className="text-4xl font-bold text-forest-950">{(booking?.finalAmount || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}</span>
                   <span className="text-sm text-slate-600">บาท (THB)</span>
                 </div>
-                <div className="mt-1 text-[10px] text-slate-500">ยอดเงินในสลิปต้องตรงกับยอดนี้ (BR6)</div>
+                <div className="mt-1 text-[10px] text-slate-500">ยอดเงินในสลิปต้องตรงกับยอดนี้</div>
               </div>
 
               {isPending ? (
                 <Link to={`/payment/${bookingId}`} className="btn-primary w-full py-3.5">
-                  ดำเนินการชำระเงิน / อัปโหลดสลิป (UCS-4.1) <ArrowRight className="h-4 w-4" />
+                  ดำเนินการชำระเงิน / อัปโหลดสลิป <ArrowRight className="h-4 w-4" />
                 </Link>
               ) : (
                 <Link to={`/my-bookings/${bookingId}`} className="btn-primary w-full py-3.5">

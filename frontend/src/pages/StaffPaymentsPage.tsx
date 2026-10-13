@@ -133,7 +133,7 @@ export const StaffPaymentsPage: React.FC = () => {
           t: 'ยอดเงินชำระ (Payment Amount)',
           ok: selected.amountMatches !== false,
           auto: true,
-          tag: selected.amountMatches !== false ? 'ตรงกัน 100% (BR6 Pass)' : 'ยอดไม่ตรง (BR6 Fail)',
+          tag: selected.amountMatches !== false ? 'ตรงกัน 100%' : 'ยอดไม่ตรง',
           left: ['ข้อมูลสลิป', formatTHB(selected.amount)],
           right: ['ยอดการจองในระบบ', formatTHB(selected.bookingFinalAmount)],
         },
@@ -155,7 +155,7 @@ export const StaffPaymentsPage: React.FC = () => {
         },
         {
           n: 4,
-          t: 'เวลาส่งสลิปและกฎ 15 นาที (BR3)',
+          t: 'เวลาส่งสลิปและกฎ 15 นาที',
           ok: selected.bookingStatus === 'PENDING_PAYMENT',
           auto: true,
           tag: selected.bookingStatus === 'PENDING_PAYMENT' ? 'ส่งทันเวลา (ระบบหยุดนับ)' : `สถานะการจอง ${selected.bookingStatus}`,
@@ -186,10 +186,10 @@ export const StaffPaymentsPage: React.FC = () => {
   return (
     <StaffLayout>
       <PageHeader
-        code="UCS-7"
+        code="Slip Verification"
         eyebrow="เคาน์เตอร์ตรวจสอบการชำระเงิน"
         title="ระบบตรวจสลิปและอนุมัติการจอง (Split-View Console)"
-        subtitle="ตรวจสอบสลิปเทียบกับข้อมูลการจองในระบบ (BR6) แล้วอนุมัติเพื่อเปลี่ยนสถานะการจองเป็น ชำระแล้ว ออกใบเสร็จ และแจ้งเตือนลูกค้าอัตโนมัติ"
+        subtitle="ตรวจสอบสลิปเทียบกับข้อมูลการจองในระบบ แล้วอนุมัติเพื่อเปลี่ยนสถานะการจองเป็น ชำระแล้ว ออกใบเสร็จ และแจ้งเตือนลูกค้าอัตโนมัติ"
         actions={
           <button onClick={() => refetch()} className="btn-primary">
             <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} /> ดึงคิวใหม่ (Sync Now)
@@ -201,12 +201,12 @@ export const StaffPaymentsPage: React.FC = () => {
         <StatCard label="สลิปรอตรวจสอบ (PENDING)" value={rows.length} unit="รายการ" icon={<Hourglass className="h-5 w-5" />} tone="blue" footer={`ยอดรวมรอตรวจ ${formatTHB(pendingTotal)}`} />
         <StatCard label="อนุมัติแล้ว (รอบการทำงานนี้)" value={session.approved} unit="รายการ" icon={<CheckCircle2 className="h-5 w-5" />} footer={`ยอดรวม ${formatTHB(session.amount)}`} />
         <StatCard label="ปฏิเสธ (รอบการทำงานนี้)" value={session.rejected} unit="รายการ" icon={<XCircle className="h-5 w-5" />} tone="rose" footer="ระบบแจ้งลูกค้าให้ส่งสลิปใหม่" />
-        <StatCard label="ยอดในสลิปไม่ตรง (BR6)" value={mismatchCount} unit="รายการ" icon={<AlertTriangle className="h-5 w-5" />} tone="amber" footer="ระบบไม่อนุญาตให้อนุมัติ" />
+        <StatCard label="ยอดในสลิปไม่ตรง" value={mismatchCount} unit="รายการ" icon={<AlertTriangle className="h-5 w-5" />} tone="amber" footer="ระบบไม่อนุญาตให้อนุมัติ" />
       </div>
 
       {lastVerifiedReceipt && (
         <Alert tone="success" title="อนุมัติสลิปสำเร็จ — การจองเปลี่ยนเป็น ชำระแล้ว (CONFIRMED)" onClose={() => setLastVerifiedReceipt(null)}>
-          ออกใบเสร็จเลขที่ <strong className="font-mono">{lastVerifiedReceipt.receiptNumber}</strong> ยอด {formatTHB(lastVerifiedReceipt.totalAmount)} และส่งแจ้งเตือนถึงลูกค้าแล้ว (BR7) •{' '}
+          ออกใบเสร็จเลขที่ <strong className="font-mono">{lastVerifiedReceipt.receiptNumber}</strong> ยอด {formatTHB(lastVerifiedReceipt.totalAmount)} และส่งแจ้งเตือนถึงลูกค้าแล้ว •{' '}
           <Link to={`/receipt/${lastVerifiedReceipt.bookingId}`} className="font-semibold underline">
             ดูใบเสร็จ
           </Link>
@@ -219,7 +219,7 @@ export const StaffPaymentsPage: React.FC = () => {
         <div className="flex flex-wrap gap-2">
           {[
             { k: 'all', l: `ทั้งหมด (${rows.length})` },
-            { k: 'match', l: `ยอดตรง BR6 (${rows.length - mismatchCount})` },
+            { k: 'match', l: `ยอดตรง (${rows.length - mismatchCount})` },
             { k: 'mismatch', l: `ยอดไม่ตรง (${mismatchCount})` },
           ].map((t) => (
             <button
@@ -267,7 +267,7 @@ export const StaffPaymentsPage: React.FC = () => {
                     </div>
                   </div>
                   <div className="mt-1 flex flex-wrap gap-2">
-                    {p.amountMatches === false ? <span className="badge-rose">ยอดเงินไม่ตรง (BR6 Mismatch)</span> : <span className="badge-mint">ยอดตรง 100%</span>}
+                    {p.amountMatches === false ? <span className="badge-rose">ยอดเงินไม่ตรง</span> : <span className="badge-mint">ยอดตรง 100%</span>}
                   </div>
                   <div className="mt-2 space-y-0.5 text-xs text-slate-600">
                     <div className="flex items-center gap-1.5">
@@ -358,7 +358,7 @@ export const StaffPaymentsPage: React.FC = () => {
 
               <div className="space-y-3">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-semibold text-slate-600">เกณฑ์ตรวจสอบเทียบเคียงตาม BR6</span>
+                  <span className="font-semibold text-slate-600">เกณฑ์การตรวจสอบสลิป</span>
                   <span className="badge-mint">
                     ระบบผ่าน {checks.filter((c) => c.auto && c.ok).length} / {checks.filter((c) => c.auto).length} ข้ออัตโนมัติ
                   </span>
@@ -404,7 +404,7 @@ export const StaffPaymentsPage: React.FC = () => {
                 onClick={() => setConfirmVerify(true)}
                 disabled={isProcessing || selected.amountMatches === false}
                 className="btn-primary h-full flex-col py-4 sm:col-span-1"
-                title={selected.amountMatches === false ? 'ยอดเงินไม่ตรง (BR6) ไม่อนุญาตให้อนุมัติ' : ''}
+                title={selected.amountMatches === false ? 'ยอดเงินไม่ตรง ไม่อนุญาตให้อนุมัติ' : ''}
               >
                 <span className="flex items-center gap-2">
                   <CheckCircle2 className="h-5 w-5" /> อนุมัติสลิป & ยืนยันการจอง
@@ -459,7 +459,7 @@ export const StaffPaymentsPage: React.FC = () => {
         <div className="flex items-start gap-3">
           <ShieldCheck className="h-6 w-6 shrink-0 text-mint-300" />
           <div className="text-sm text-white/80">
-            <span className="font-semibold text-mint-300">ระเบียบ BR6 (Slip Verification Standards)</span> — เจ้าหน้าที่ต้องตรวจสอบยอดเงินในสลิปให้ตรงกับยอดการจองทุกประการก่อนอนุมัติ
+            <span className="font-semibold text-mint-300">มาตรฐานการตรวจสอบสลิป</span> — เจ้าหน้าที่ต้องตรวจสอบยอดเงินในสลิปให้ตรงกับยอดการจองทุกประการก่อนอนุมัติ
             เมื่ออนุมัติ ระบบจะเปลี่ยนสถานะการจองเป็นชำระแล้ว ออกใบเสร็จอิเล็กทรอนิกส์ และส่งแจ้งเตือนถึงลูกค้าใน Transaction เดียว
           </div>
         </div>

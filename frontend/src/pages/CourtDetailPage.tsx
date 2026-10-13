@@ -170,7 +170,7 @@ export const CourtDetailPage: React.FC = () => {
 
   return (
     <CustomerLayout>
-      <Breadcrumb items={[{ label: 'ค้นหาสนาม (UCS-2)', to: '/courts' }, { label: court.name }, { label: 'ตารางเวลา Real-Time (UCS-2.2 & 2.4)' }]} />
+      <Breadcrumb items={[{ label: 'ค้นหาสนาม', to: '/courts' }, { label: court.name }, { label: 'ตารางเวลา Real-Time' }]} />
 
       {/* Hero + ค่าบริการ (UCS-2.4) */}
       <section className="card grid overflow-hidden lg:grid-cols-[1.4fr_1fr]">
@@ -195,7 +195,7 @@ export const CourtDetailPage: React.FC = () => {
               <MapPin className="h-3.5 w-3.5" /> {court.locationDetails || 'Barbie Sports Arena'}
             </div>
             <h1 className="text-3xl font-bold text-white md:text-4xl">{court.name}</h1>
-            <p className="text-sm text-white/80">สนามมาตรฐานพร้อมระบบตรวจสอบสถานะการจองแบบ Real-time จากฐานข้อมูล ไม่มีการจองซ้อน (BR2)</p>
+            <p className="text-sm text-white/80">สนามมาตรฐานพร้อมระบบตรวจสอบสถานะการจองแบบ Real-time จากฐานข้อมูล ไม่มีการจองซ้อน</p>
           </div>
         </div>
 
@@ -231,7 +231,7 @@ export const CourtDetailPage: React.FC = () => {
 
           {court.pricingRates.length > 0 && (
             <div>
-              <div className="mb-2 text-xs font-semibold text-slate-600">อัตราค่าบริการตามช่วงเวลา (PRICING_RATES)</div>
+              <div className="mb-2 text-xs font-semibold text-slate-600">อัตราค่าบริการตามช่วงเวลา</div>
               <div className="space-y-1.5">
                 {court.pricingRates.map((r) => (
                   <div key={r.rateId} className="flex justify-between rounded-lg bg-panel px-3 py-1.5 text-xs">
@@ -248,7 +248,7 @@ export const CourtDetailPage: React.FC = () => {
           <div className="mt-auto flex items-start gap-3 rounded-xl bg-panel p-3 text-[11px] text-slate-600">
             <Info className="mt-0.5 h-4 w-4 shrink-0 text-forest-600" />
             <span>
-              <strong className="text-forest-900">ข้อกำหนดสำคัญ (BR1 & BR3):</strong> ต้องเข้าสู่ระบบก่อนจอง และต้องชำระเงินภายใน 15 นาทีหลังสร้างรายการจอง
+              <strong className="text-forest-900">ข้อกำหนดสำคัญ:</strong> ต้องเข้าสู่ระบบก่อนจอง และต้องชำระเงินภายใน 15 นาทีหลังสร้างรายการจอง
             </span>
           </div>
         </div>
@@ -262,7 +262,7 @@ export const CourtDetailPage: React.FC = () => {
             <span className="h-2.5 w-2.5 rounded-full bg-mint-500" /> ว่าง (Available) - กดเพื่อเลือกจอง
           </span>
           <span className="badge bg-panel py-1 text-slate-700">
-            <span className="h-2.5 w-2.5 rounded-full bg-sky-500" /> รอชำระเงิน (ถือครอง 15 นาที BR3)
+            <span className="h-2.5 w-2.5 rounded-full bg-sky-500" /> รอชำระเงิน (ถือครอง 15 นาที)
           </span>
           <span className="badge bg-panel py-1 text-slate-700">
             <span className="h-2.5 w-2.5 rounded-full bg-rose-500" /> ถูกจองแล้ว
@@ -379,7 +379,7 @@ export const CourtDetailPage: React.FC = () => {
         <div className="flex items-start gap-3 rounded-xl bg-panel p-4 text-xs text-slate-600">
           <Info className="mt-0.5 h-4 w-4 shrink-0 text-forest-600" />
           <div>
-            <strong className="text-forest-900">ข้อกำหนดการจองสนาม (Business Rules BR3 & BR4):</strong> เมื่อยืนยันการจอง ระบบจะสงวนสิทธิ์ (Soft Lock)
+            <strong className="text-forest-900">ข้อกำหนดการจองสนาม:</strong> เมื่อยืนยันการจอง ระบบจะสงวนสิทธิ์ (Soft Lock)
             ช่วงเวลาไว้ให้ 15 นาทีเพื่อชำระเงิน หากเกินเวลาระบบจะปลดสิทธิ์ให้เป็นสถานะ "ว่าง" โดยอัตโนมัติ และจองล่วงหน้าได้ไม่เกิน 30 วัน
           </div>
         </div>
@@ -390,7 +390,7 @@ export const CourtDetailPage: React.FC = () => {
         <div className="card space-y-4 p-6">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold text-forest-950">อุปกรณ์กีฬาให้เช่าเพิ่มเติม</h2>
-            <span className="badge-mint">สต็อกจริงจาก EQUIPMENT</span>
+            <span className="badge-mint">จำนวนคงเหลือล่าสุด</span>
           </div>
           {equipment.length === 0 ? (
             <p className="text-sm text-slate-500">ไม่มีอุปกรณ์ให้เช่าสำหรับสนามประเภทนี้</p>
@@ -411,7 +411,7 @@ export const CourtDetailPage: React.FC = () => {
             </div>
           )}
           <div className="rounded-xl bg-rose-50 p-3 text-[11px] text-rose-800">
-            <strong>ข้อกำหนดตามกฎระเบียบ BR11:</strong> คืนอุปกรณ์ช้ากว่าเวลาสิ้นสุดการจอง คิดค่าปรับ 20 บาท / 15 นาที / ชิ้น ชำรุดหรือสูญหายคิดตามราคาประเมิน
+            <strong>ข้อกำหนดการคืนอุปกรณ์:</strong> คืนอุปกรณ์ช้ากว่าเวลาสิ้นสุดการจอง คิดค่าปรับ 20 บาท / 15 นาที / ชิ้น ชำรุดหรือสูญหายคิดตามราคาประเมิน
           </div>
         </div>
 
@@ -453,7 +453,7 @@ export const CourtDetailPage: React.FC = () => {
                   : 'ยังไม่ได้เลือกช่วงเวลา — คลิกช่องสีเขียวด้านบน'}
               </div>
               <div className="text-[11px] text-slate-500">
-                เลือกแล้ว {selectedSlots.length} ชม. • <span className="text-amber-600">ล็อกสิทธิ์ 15 นาทีหลังยืนยันการจอง (BR3)</span>
+                เลือกแล้ว {selectedSlots.length} ชม. • <span className="text-amber-600">ล็อกสิทธิ์ 15 นาทีหลังยืนยันการจอง</span>
               </div>
             </div>
           </div>
@@ -468,7 +468,7 @@ export const CourtDetailPage: React.FC = () => {
               ล้างช่วงเวลา
             </button>
             <button className="btn-primary px-5 py-3" onClick={handleProceedBooking} disabled={!range}>
-              {isAuthenticated ? 'ดำเนินการเลือกอุปกรณ์และจอง (ถัดไป)' : 'เข้าสู่ระบบเพื่อจอง (BR1)'} <ArrowRight className="h-4 w-4" />
+              {isAuthenticated ? 'ดำเนินการเลือกอุปกรณ์และจอง (ถัดไป)' : 'เข้าสู่ระบบเพื่อจอง'} <ArrowRight className="h-4 w-4" />
             </button>
           </div>
         </div>

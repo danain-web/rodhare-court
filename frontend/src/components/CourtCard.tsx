@@ -100,7 +100,7 @@ export const CourtCard: React.FC<CourtCardProps> = ({ court, slots, date }) => {
           <Link to={detailUrl} className="btn-primary flex-1">
             ดูตารางเวลา Real-time <ArrowRight className="h-4 w-4" />
           </Link>
-          <Link to={detailUrl} className="btn-soft px-3" title="รายละเอียดและค่าบริการ (UC-02-04)">
+          <Link to={detailUrl} className="btn-soft px-3" title="รายละเอียดและค่าบริการ">
             <Info className="h-4 w-4" />
           </Link>
         </div>

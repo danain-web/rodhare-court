@@ -152,7 +152,7 @@ export const CountdownBanner: React.FC<{ expiresAt?: string | Date | null; title
         </div>
         <div className="space-y-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="badge bg-rose-900 text-white">กฎระเบียบ BR3 (15-Minute Reservation Lock)</span>
+            <span className="badge bg-rose-900 text-white">ล็อกสนาม 15 นาที (Reservation Lock)</span>
             <span className="text-sm font-semibold text-rose-900">{title}</span>
           </div>
           <p className="text-xs text-slate-600">{description}</p>

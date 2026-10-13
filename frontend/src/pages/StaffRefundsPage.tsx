@@ -76,10 +76,10 @@ export const StaffRefundsPage: React.FC = () => {
   return (
     <StaffLayout>
       <PageHeader
-        code="UCS-6.4 Console"
+        code="Refund Approval"
         eyebrow="ฝ่ายการเงินและบัญชี"
         title="อนุมัติการคืนเงินและบันทึกผล"
-        subtitle="ตรวจสอบคำขอยกเลิกการจอง คำนวณยอดคืนเงินตามเกณฑ์ BR12 และยืนยันการโอนเงินคืนสู่บัญชีลูกค้า"
+        subtitle="ตรวจสอบคำขอยกเลิกการจอง คำนวณยอดคืนเงินตามระเบียบการยกเลิก และยืนยันการโอนเงินคืนสู่บัญชีลูกค้า"
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -122,7 +122,7 @@ export const StaffRefundsPage: React.FC = () => {
                       <div className="text-xs text-slate-500">อ้างอิงการจอง: #{r.bookingNumber || r.bookingId}</div>
                     </div>
                     <div className="text-right">
-                      <div className="text-[10px] text-slate-500">คำนวณยอดคืน (BR12)</div>
+                      <div className="text-[10px] text-slate-500">คำนวณยอดคืน</div>
                       <div className="text-2xl font-bold text-forest-950">{formatTHB(ramt(r))}</div>
                       <span className={t.cls}>{t.label}</span>
                     </div>
@@ -145,7 +145,7 @@ export const StaffRefundsPage: React.FC = () => {
           )}
 
           <div className="card space-y-3 p-5">
-            <div className="text-sm font-semibold text-forest-950">เกณฑ์เงื่อนไข Business Rule BR12 สำหรับเจ้าหน้าที่การเงิน</div>
+            <div className="text-sm font-semibold text-forest-950">เกณฑ์การคืนเงินสำหรับเจ้าหน้าที่การเงิน</div>
             <div className="grid gap-3 sm:grid-cols-3">
               <div className="rounded-xl bg-panel p-3 text-xs">
                 <div className="font-semibold text-forest-700">&gt; 24 ชั่วโมงก่อนเริ่ม</div>
@@ -186,7 +186,7 @@ export const StaffRefundsPage: React.FC = () => {
             <div className="rounded-2xl bg-mint-50 p-5 ring-1 ring-mint-200">
               <div className="mb-2 flex items-center justify-between">
                 <span className="flex items-center gap-2 text-sm font-semibold text-forest-950">
-                  <Percent className="h-4 w-4" /> การคำนวณสิทธิ์อัตโนมัติ (BR12 Engine)
+                  <Percent className="h-4 w-4" /> การคำนวณสิทธิ์อัตโนมัติ
                 </span>
                 <span className={tierOf(selected.refundPercentage).cls}>{selected.refundPercentage}% REFUND</span>
               </div>
@@ -226,7 +226,7 @@ export const StaffRefundsPage: React.FC = () => {
                 ปฏิเสธคำขอคืนเงิน
               </button>
             </div>
-            <div className="text-center text-[11px] text-slate-500">ทุกการอนุมัติ/ปฏิเสธถูกบันทึกใน AUDIT_LOGS พร้อมผู้ดำเนินการ (BR16)</div>
+            <div className="text-center text-[11px] text-slate-500">ทุกการอนุมัติ/ปฏิเสธถูกบันทึกในประวัติการทำงานพร้อมชื่อผู้ดำเนินการ</div>
           </div>
         ) : (
           <EmptyState title="เลือกคำขอจากคิวเพื่อตรวจสอบ" />

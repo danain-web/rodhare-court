@@ -112,7 +112,7 @@ const ExecutiveReport: React.FC<{ data: any }> = ({ data }) => {
           footer={`ชั่วโมงที่ถูกใช้ ${data.bookedHoursThisMonth ?? 0} ชม. เทียบเวลาเปิดทำการทั้งเดือน`}
         />
         <StatCard
-          label="ยอดเงินคืนสะสม (BR12 REFUND)"
+          label="ยอดเงินคืนสะสม (REFUND)"
           value={formatTHB(data.refundedThisMonth)}
           icon={<RotateCcw className="h-5 w-5" />}
           tone="rose"
@@ -212,11 +212,11 @@ const ExecutiveReport: React.FC<{ data: any }> = ({ data }) => {
 
       <div className="card-dark grid gap-4 p-6 md:grid-cols-3">
         <div>
-          <div className="text-[11px] text-mint-300">BR12 Tier — เงินคืนเดือนนี้</div>
+          <div className="text-[11px] text-mint-300">เงินคืนเดือนนี้</div>
           <div className="text-2xl font-bold text-white">{formatTHB(data.refundedThisMonth)}</div>
         </div>
         <div>
-          <div className="text-[11px] text-mint-300">BR11 — รายรับค่าปรับอุปกรณ์ (สะสม)</div>
+          <div className="text-[11px] text-mint-300">รายรับค่าปรับอุปกรณ์ (สะสม)</div>
           <div className="text-2xl font-bold text-white">{formatTHB(data.fineRevenue)}</div>
         </div>
         <div>
@@ -328,15 +328,15 @@ export const DashboardPage: React.FC = () => {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <StatCard label="การจองที่กำลังจะถึง" value={d.activeBookings ?? 0} unit="รายการ" icon={<CalendarCheck className="h-5 w-5" />} />
-            <StatCard label="รอชำระเงิน (BR3)" value={d.pendingPaymentBookings ?? 0} unit="รายการ" icon={<Wallet className="h-5 w-5" />} tone="amber" />
+            <StatCard label="รอชำระเงิน" value={d.pendingPaymentBookings ?? 0} unit="รายการ" icon={<Wallet className="h-5 w-5" />} tone="amber" />
             <StatCard label="การแจ้งเตือนที่ยังไม่อ่าน" value={d.notificationsCount ?? 0} icon={<Bell className="h-5 w-5" />} tone="blue" />
             <StatCard label="ค่าปรับค้างชำระ" value={formatTHB(d.unpaidFines)} icon={<AlertTriangle className="h-5 w-5" />} tone="rose" footer="ค่าปรับค้างจะทำให้จองสนามใหม่ไม่ได้" />
           </div>
         )}
         <div className="grid gap-4 md:grid-cols-3">
-          <QuickLink to="/courts" icon={<Compass className="h-5 w-5" />} title="ค้นหาและจองสนาม (UCS-2)" desc="ดูตารางเวลาว่างแบบ Real-time" />
-          <QuickLink to="/my-bookings" icon={<ReceiptText className="h-5 w-5" />} title="รายการจองของฉัน (UCS-6.1)" desc="ชำระเงิน ดูใบเสร็จ หรือยกเลิกคืนเงิน" />
-          <QuickLink to="/fines" icon={<AlertTriangle className="h-5 w-5" />} title="ค่าปรับอุปกรณ์" desc="ตรวจสอบและชำระค่าปรับ (BR11)" />
+          <QuickLink to="/courts" icon={<Compass className="h-5 w-5" />} title="ค้นหาและจองสนาม" desc="ดูตารางเวลาว่างแบบ Real-time" />
+          <QuickLink to="/my-bookings" icon={<ReceiptText className="h-5 w-5" />} title="รายการจองของฉัน" desc="ชำระเงิน ดูใบเสร็จ หรือยกเลิกคืนเงิน" />
+          <QuickLink to="/fines" icon={<AlertTriangle className="h-5 w-5" />} title="ค่าปรับอุปกรณ์" desc="ตรวจสอบและชำระค่าปรับ" />
         </div>
         <RbacTester />
       </CustomerLayout>
@@ -346,12 +346,12 @@ export const DashboardPage: React.FC = () => {
   return (
     <StaffLayout>
       <PageHeader
-        code={isExecView ? 'UCS-9 Master Module' : 'Staff Overview'}
+        code={isExecView ? 'Executive Report' : 'Staff Overview'}
         eyebrow={isExecView ? 'รายงานประจำเดือน (Monthly Settlement)' : 'เคาน์เตอร์บริการ'}
         title={isExecView ? 'แดชบอร์ดสรุปรายงานรายได้และสถิติการใช้งานสนามกีฬา' : `ภาพรวมการทำงานวันนี้ — คุณ${user?.firstName}`}
         subtitle={
           isExecView
-            ? 'รายงานภาพรวมรายได้ อัตราการครองสนาม สถิติอุปกรณ์และค่าปรับ (BR11) และยอดคืนเงิน (BR12) จากฐานข้อมูลจริง (BR17)'
+            ? 'รายงานภาพรวมรายได้ อัตราการครองสนาม สถิติอุปกรณ์และค่าปรับ และยอดคืนเงิน จากฐานข้อมูลจริง'
             : 'คิวงานที่ต้องดำเนินการ: ตรวจสลิป เช็คอิน ส่งมอบ/รับคืนอุปกรณ์ และอนุมัติคืนเงิน'
         }
         actions={refreshBtn}
@@ -359,7 +359,7 @@ export const DashboardPage: React.FC = () => {
 
       {hasRole('STAFF') && !isLoading && (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-          <StatCard label="สลิปรอตรวจ (UCS-7)" value={d.pendingPaymentSlips ?? 0} icon={<ReceiptText className="h-5 w-5" />} tone="amber" />
+          <StatCard label="สลิปรอตรวจ" value={d.pendingPaymentSlips ?? 0} icon={<ReceiptText className="h-5 w-5" />} tone="amber" />
           <StatCard label="การจองที่ชำระแล้ววันนี้" value={d.todayBookings ?? 0} icon={<CalendarCheck className="h-5 w-5" />} />
           <StatCard label="เช็คอินแล้ววันนี้" value={d.todayCheckIns ?? 0} icon={<BadgeCheck className="h-5 w-5" />} tone="blue" />
           <StatCard label="อุปกรณ์ที่ถูกยืมอยู่" value={d.outstandingBorrowings ?? 0} icon={<Dumbbell className="h-5 w-5" />} />
@@ -372,16 +372,16 @@ export const DashboardPage: React.FC = () => {
           <StatCard label="ผู้ใช้งานที่ใช้งานอยู่" value={d.totalUsers ?? 0} unit="บัญชี" icon={<Users className="h-5 w-5" />} />
           <StatCard label="สนามที่เปิดใช้งาน" value={d.totalCourts ?? 0} unit="คอร์ท" icon={<Warehouse className="h-5 w-5" />} tone="blue" />
           <StatCard label="โปรโมชั่นที่ยังไม่หมดอายุ" value={d.totalPromotions ?? 0} icon={<Tag className="h-5 w-5" />} tone="amber" />
-          <StatCard label="Audit log วันนี้ (BR16)" value={d.auditLogsToday ?? 0} icon={<FileClock className="h-5 w-5" />} />
+          <StatCard label="Audit log วันนี้" value={d.auditLogsToday ?? 0} icon={<FileClock className="h-5 w-5" />} />
         </div>
       )}
 
       {hasRole('STAFF') && (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <QuickLink to="/staff/payments" icon={<ReceiptText className="h-5 w-5" />} title="ตรวจสอบสลิป (UCS-7)" desc="อนุมัติ/ปฏิเสธสลิป ออกใบเสร็จ" />
-          <QuickLink to="/staff/equipment/borrow" icon={<Dumbbell className="h-5 w-5" />} title="เช็คอิน & ส่งมอบอุปกรณ์ (UCS-5)" desc="ตรวจ BR8 / BR9" />
-          <QuickLink to="/staff/equipment/return" icon={<RotateCcw className="h-5 w-5" />} title="รับคืนอุปกรณ์ & ค่าปรับ" desc="คำนวณค่าปรับ BR11" />
-          <QuickLink to="/staff/refunds" icon={<ClipboardCheck className="h-5 w-5" />} title="อนุมัติคืนเงิน (UCS-6.4)" desc="เกณฑ์ BR12" />
+          <QuickLink to="/staff/payments" icon={<ReceiptText className="h-5 w-5" />} title="ตรวจสอบสลิป" desc="อนุมัติ/ปฏิเสธสลิป ออกใบเสร็จ" />
+          <QuickLink to="/staff/equipment/borrow" icon={<Dumbbell className="h-5 w-5" />} title="เช็คอิน & ส่งมอบอุปกรณ์" desc="ตรวจสิทธิ์เช็คอินและการยืมอุปกรณ์" />
+          <QuickLink to="/staff/equipment/return" icon={<RotateCcw className="h-5 w-5" />} title="รับคืนอุปกรณ์ & ค่าปรับ" desc="ตรวจสภาพและคำนวณค่าปรับ" />
+          <QuickLink to="/staff/refunds" icon={<ClipboardCheck className="h-5 w-5" />} title="อนุมัติคืนเงิน" desc="ตรวจคำขอและคำนวณยอดคืน" />
         </div>
       )}
 
@@ -395,7 +395,7 @@ export const DashboardPage: React.FC = () => {
       {!isExecView && (
         <div className="card-soft flex items-center gap-3 p-4 text-xs text-slate-600">
           <BarChart3 className="h-5 w-5 text-forest-700" />
-          รายงานรายได้และสถิติ (UCS-9) เปิดให้ผู้บริหารและผู้ดูแลระบบตามกฎ BR17
+          รายงานรายได้และสถิติ เปิดให้เฉพาะผู้บริหารและผู้ดูแลระบบ
         </div>
       )}
 

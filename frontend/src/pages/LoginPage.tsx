@@ -72,9 +72,9 @@ export const LoginPage: React.FC = () => {
           <p className="max-w-md text-sm text-white/70">ตารางเวลาว่างแบบ Real-time ชำระผ่าน PromptPay พร้อมใบเสร็จอิเล็กทรอนิกส์และบัตรผ่านดิจิทัล</p>
           <div className="grid max-w-md grid-cols-3 gap-3">
             {[
-              { i: <CalendarCheck className="h-5 w-5" />, t: 'BR2', d: 'กันจองทับซ้อน' },
-              { i: <Timer className="h-5 w-5" />, t: 'BR3', d: 'ล็อกสนาม 15 นาที' },
-              { i: <ShieldCheck className="h-5 w-5" />, t: 'BR6', d: 'ตรวจยอดสลิป' },
+              { i: <CalendarCheck className="h-5 w-5" />, t: 'จองแบบ Real-time', d: 'ไม่มีการจองทับซ้อน' },
+              { i: <Timer className="h-5 w-5" />, t: 'ล็อกสนามให้', d: '15 นาทีระหว่างชำระเงิน' },
+              { i: <ShieldCheck className="h-5 w-5" />, t: 'ตรวจสลิปอัตโนมัติ', d: 'ยอดเงินและสลิปซ้ำ' },
             ].map((x) => (
               <div key={x.t} className="rounded-2xl bg-white/10 p-4 backdrop-blur">
                 <div className="text-mint-300">{x.i}</div>
@@ -94,7 +94,7 @@ export const LoginPage: React.FC = () => {
             <BrandMark />
           </div>
           <div>
-            <span className="badge-mint">BR1 Member Login</span>
+            <span className="badge-mint">Member Login</span>
             <h2 className="mt-2 text-3xl font-bold text-forest-950">เข้าสู่ระบบ</h2>
             <p className="text-sm text-slate-500">สมาชิกต้องเข้าสู่ระบบก่อนทำการจองสนาม</p>
           </div>

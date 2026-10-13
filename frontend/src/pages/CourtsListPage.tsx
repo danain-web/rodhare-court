@@ -15,7 +15,7 @@ const PERIODS = [
 // UCS-2.1 ค้นหาสนามกีฬาตามประเภท + UCS-2.3 กรองตามวันที่/เวลา
 export const CourtsListPage: React.FC = () => {
   const today = todayISO();
-  const maxDate = addDaysISO(today, 30); // BR4: จองล่วงหน้าได้ไม่เกิน 30 วัน
+  const maxDate = addDaysISO(today, 30); // จองล่วงหน้าได้ไม่เกิน 30 วัน
 
   const [selectedSport, setSelectedSport] = useState<number | undefined>(undefined);
   const [searchQuery, setSearchQuery] = useState('');
@@ -79,17 +79,17 @@ export const CourtsListPage: React.FC = () => {
   return (
     <CustomerLayout>
       <PageHeader
-        code="UCS-2.1 Booking Matrix"
+        code="Court Booking"
         eyebrow="อัปเดตสถานะแบบเรียลไทม์จากฐานข้อมูล"
         title="ค้นหาสนามกีฬาและช่วงเวลาว่าง"
-        subtitle="ค้นหาคอร์ทมาตรฐาน เลือกช่วงเวลาที่ต้องการ และทำการจองออนไลน์ได้ทันที ปลอดภัย แม่นยำ ไร้การชนซ้ำ (BR2)"
+        subtitle="ค้นหาคอร์ทมาตรฐาน เลือกช่วงเวลาที่ต้องการ และทำการจองออนไลน์ได้ทันที ปลอดภัย แม่นยำ ไร้การชนซ้ำ"
         actions={
           <div className="card-soft flex items-center gap-3 px-4 py-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-forest-700">
               <ShieldCheck className="h-5 w-5" />
             </div>
             <div className="text-xs">
-              <div className="font-semibold text-forest-950">เงื่อนไขการจอง (BR4)</div>
+              <div className="font-semibold text-forest-950">เงื่อนไขการจอง</div>
               <div className="text-slate-500">จองล่วงหน้าได้ไม่เกิน 30 วัน</div>
             </div>
           </div>
@@ -144,7 +144,7 @@ export const CourtsListPage: React.FC = () => {
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <label className="label mb-0">เลือกวันที่ต้องการใช้งาน</label>
-              <span className="text-[11px] text-slate-500">BR4 จองล่วงหน้า 30 วัน</span>
+              <span className="text-[11px] text-slate-500">จองล่วงหน้าได้ 30 วัน</span>
             </div>
             <div className="relative">
               <CalendarDays className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
@@ -264,13 +264,13 @@ export const CourtsListPage: React.FC = () => {
             <p className="text-xs text-slate-500">เพื่อความเป็นระเบียบและสิทธิประโยชน์ที่เท่าเทียมของสมาชิก Barbie Sports Arena ทุกท่าน</p>
           </div>
         </div>
-        <RuleCard code="BR3" title="ชำระเงินใน 15 นาที" icon={<Timer className="h-4 w-4" />}>
+        <RuleCard code="ชำระเงิน" title="ชำระเงินใน 15 นาที" icon={<Timer className="h-4 w-4" />}>
           ระบบ Hold คอร์ทให้ 15 นาที หากไม่ชำระและส่งสลิปจะคืนสล็อตสู่สาธารณะอัตโนมัติ
         </RuleCard>
-        <RuleCard code="BR4" title="สิทธิ์จอง" icon={<CalendarDays className="h-4 w-4" />}>
+        <RuleCard code="การจอง" title="สิทธิ์จอง" icon={<CalendarDays className="h-4 w-4" />}>
           จองล่วงหน้าได้ไม่เกิน 30 วัน
         </RuleCard>
-        <RuleCard code="BR12" title="ยกเลิก/คืนเงิน" icon={<Wallet className="h-4 w-4" />}>
+        <RuleCard code="คืนเงิน" title="ยกเลิก/คืนเงิน" icon={<Wallet className="h-4 w-4" />}>
           ยกเลิกล่วงหน้ามากกว่า 24 ชม. รับเงินคืน 100% / 1-24 ชม. รับคืน 50% / น้อยกว่า 1 ชม. ไม่คืนเงิน
         </RuleCard>
       </section>

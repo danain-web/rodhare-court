@@ -260,10 +260,10 @@ export const AdminCourtsPage: React.FC = () => {
   return (
     <StaffLayout>
       <PageHeader
-        code="UCS-8"
+        code="Court Management"
         eyebrow="บริหารจัดการระบบ"
         title="จัดการข้อมูลสนามและสต็อกอุปกรณ์กีฬา"
-        subtitle="บริหารสถานะสนาม เปิด-ปิดปรับปรุง (Maintenance Mode) ราคาต่อชั่วโมง และรูปภาพสนาม — เฉพาะผู้ดูแลระบบ (BR13)"
+        subtitle="บริหารสถานะสนาม เปิด-ปิดปรับปรุง (Maintenance Mode) ราคาต่อชั่วโมง และรูปภาพสนาม — เฉพาะผู้ดูแลระบบ"
         actions={
           <>
             <Link to="/admin/equipment" className="btn-mint">
@@ -401,7 +401,7 @@ export const AdminCourtsPage: React.FC = () => {
 
       <div className="card-soft flex items-center gap-3 p-4 text-xs text-slate-600">
         <ShieldAlert className="h-5 w-5 text-forest-700" />
-        มาตรฐานการบริหารจัดการทรัพย์สินสนามกีฬา: การลบสนามที่ยังมีการจองในอนาคตจะถูกปฏิเสธ ให้เปลี่ยนเป็น MAINTENANCE แทน และทุกการแก้ไขถูกบันทึกใน Audit Log (BR16)
+        มาตรฐานการบริหารจัดการทรัพย์สินสนามกีฬา: การลบสนามที่ยังมีการจองในอนาคตจะถูกปฏิเสธ ให้เปลี่ยนเป็น MAINTENANCE แทน และทุกการแก้ไขถูกบันทึกใน Audit Log
       </div>
 
       {/* Image Modal */}

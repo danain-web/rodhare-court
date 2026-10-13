@@ -12,7 +12,7 @@ export const ProfilePage: React.FC = () => {
 
   return (
     <Layout>
-      <PageHeader code="Profile" title="ข้อมูลโปรไฟล์ผู้ใช้งาน" subtitle="ข้อมูลบัญชีจากตาราง USERS / USER_ROLES" />
+      <PageHeader code="Profile" title="ข้อมูลโปรไฟล์ผู้ใช้งาน" subtitle="ข้อมูลบัญชีผู้ใช้และสิทธิ์การใช้งาน" />
 
       <div className="grid gap-6 lg:grid-cols-[1fr_2fr]">
         <div className="card-dark flex flex-col items-center gap-4 p-8 text-center">
@@ -34,7 +34,7 @@ export const ProfilePage: React.FC = () => {
             ))}
           </div>
           <span className={user?.isActive ? 'badge bg-mint-300 text-forest-950' : 'badge-rose'}>
-            {user?.isActive ? 'สมาชิกสถานะปกติ (Active — BR1)' : 'บัญชีถูกระงับ'}
+            {user?.isActive ? 'สมาชิกสถานะปกติ (Active)' : 'บัญชีถูกระงับ'}
           </span>
         </div>
 
@@ -61,7 +61,7 @@ export const ProfilePage: React.FC = () => {
           {/* Session JWT อยู่ใน httpOnly Cookie — JavaScript อ่านไม่ได้ (ป้องกัน XSS) จึงไม่แสดง token บนหน้า */}
           <div className="border-t border-slate-100 pt-4">
             <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-slate-600">
-              <Key className="h-4 w-4" /> Session (USER_SESSIONS)
+              <Key className="h-4 w-4" /> การเข้าสู่ระบบ (Session)
             </div>
             <div className="flex items-start gap-3 rounded-xl bg-panel p-3 text-xs text-slate-600">
               <Lock className="mt-0.5 h-4 w-4 shrink-0 text-forest-700" />

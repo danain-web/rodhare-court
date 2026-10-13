@@ -56,10 +56,10 @@ export const AdminEquipmentPage: React.FC = () => {
   return (
     <StaffLayout>
       <PageHeader
-        code="UCS-8"
+        code="Equipment Inventory"
         eyebrow="บริหารจัดการระบบ"
         title="สต็อกครุภัณฑ์และอุปกรณ์กีฬา (Equipment Inventory Ledger)"
-        subtitle="ตรวจสอบจำนวนคงเหลือ ค่าเช่า และราคาประเมินสำหรับคิดค่าปรับกรณีชำรุด/สูญหาย (BR11)"
+        subtitle="ตรวจสอบจำนวนคงเหลือ ค่าเช่า และราคาประเมินสำหรับคิดค่าปรับกรณีชำรุด/สูญหาย"
         actions={
           <>
             <Link to="/admin/courts" className="btn-soft">
@@ -177,7 +177,7 @@ export const AdminEquipmentPage: React.FC = () => {
 
       <div className="card-soft flex items-center gap-3 p-4 text-xs text-slate-600">
         <ShieldCheck className="h-5 w-5 text-forest-700" />
-        สต็อกตัดอัตโนมัติเมื่อมีการจอง คืนเมื่อยกเลิก/หมดเวลา (BR3) และอุปกรณ์ชำรุด/สูญหายจะถูกตัดออกจากคลังถาวรเมื่อรับคืน (BR11)
+        สต็อกตัดอัตโนมัติเมื่อมีการจอง คืนเมื่อยกเลิก/หมดเวลา และอุปกรณ์ชำรุด/สูญหายจะถูกตัดออกจากคลังถาวรเมื่อรับคืน
       </div>
 
       <Modal open={showModal} onClose={() => setShowModal(false)} title="เพิ่มรายการอุปกรณ์ใหม่">

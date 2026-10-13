@@ -31,19 +31,19 @@ const ITEMS: { group: string; items: Item[] }[] = [
     group: 'เมนูหลัก (Operations)',
     items: [
       { to: '/dashboard', label: 'ภาพรวมระบบ (Overview)', icon: <LayoutGrid className="h-4 w-4" />, roles: ['STAFF', 'ADMIN', 'EXECUTIVE'] },
-      { to: '/staff/equipment/borrow', label: 'เช็คอินและยืมอุปกรณ์ (UCS-5)', icon: <Dumbbell className="h-4 w-4" />, roles: ['STAFF', 'ADMIN'] },
-      { to: '/staff/equipment/return', label: 'รับคืนอุปกรณ์ & ค่าปรับ (UCS-5)', icon: <RotateCcw className="h-4 w-4" />, roles: ['STAFF', 'ADMIN'] },
-      { to: '/staff/payments', label: 'ตรวจสอบสลิป (UCS-7)', icon: <ReceiptText className="h-4 w-4" />, roles: ['STAFF', 'ADMIN'] },
-      { to: '/staff/refunds', label: 'อนุมัติการคืนเงิน (UCS-6.4)', icon: <ClipboardCheck className="h-4 w-4" />, roles: ['STAFF', 'ADMIN'] },
+      { to: '/staff/equipment/borrow', label: 'เช็คอินและยืมอุปกรณ์', icon: <Dumbbell className="h-4 w-4" />, roles: ['STAFF', 'ADMIN'] },
+      { to: '/staff/equipment/return', label: 'รับคืนอุปกรณ์ & ค่าปรับ', icon: <RotateCcw className="h-4 w-4" />, roles: ['STAFF', 'ADMIN'] },
+      { to: '/staff/payments', label: 'ตรวจสอบสลิป', icon: <ReceiptText className="h-4 w-4" />, roles: ['STAFF', 'ADMIN'] },
+      { to: '/staff/refunds', label: 'อนุมัติการคืนเงิน', icon: <ClipboardCheck className="h-4 w-4" />, roles: ['STAFF', 'ADMIN'] },
     ],
   },
   {
     group: 'ผู้ดูแลระบบ (Admin)',
     items: [
-      { to: '/admin/courts', label: 'จัดการสนาม (UCS-8)', icon: <Warehouse className="h-4 w-4" />, roles: ['ADMIN'] },
-      { to: '/admin/equipment', label: 'สต็อกอุปกรณ์กีฬา (UCS-8)', icon: <PackageCheck className="h-4 w-4" />, roles: ['ADMIN'] },
-      { to: '/admin/promotions', label: 'โปรโมชั่น (BR14, BR15)', icon: <Tag className="h-4 w-4" />, roles: ['ADMIN'] },
-      { to: '/admin/audit-logs', label: 'บันทึกการทำงาน (BR16)', icon: <FileClock className="h-4 w-4" />, roles: ['ADMIN'] },
+      { to: '/admin/courts', label: 'จัดการสนาม', icon: <Warehouse className="h-4 w-4" />, roles: ['ADMIN'] },
+      { to: '/admin/equipment', label: 'สต็อกอุปกรณ์กีฬา', icon: <PackageCheck className="h-4 w-4" />, roles: ['ADMIN'] },
+      { to: '/admin/promotions', label: 'โปรโมชั่น', icon: <Tag className="h-4 w-4" />, roles: ['ADMIN'] },
+      { to: '/admin/audit-logs', label: 'บันทึกการทำงาน', icon: <FileClock className="h-4 w-4" />, roles: ['ADMIN'] },
     ],
   },
   {
@@ -91,7 +91,7 @@ export const StaffLayout: React.FC<{ children: React.ReactNode }> = ({ children 
                   }
                 >
                   {i.icon}
-                  <span>{i.label === 'ภาพรวมระบบ (Overview)' && isExec ? 'ภาพรวม & รายงาน (UCS-9)' : i.label}</span>
+                  <span>{i.label === 'ภาพรวมระบบ (Overview)' && isExec ? 'ภาพรวม & รายงาน' : i.label}</span>
                 </NavLink>
               ))}
             </div>

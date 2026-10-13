@@ -8,7 +8,7 @@ import { StaffLayout } from '../components/layout/StaffLayout';
 import { Alert, EmptyState, PageHeader, StatusBadge, formatDateTime, formatTHB } from '../components/ui';
 import { AlertTriangle, Calculator, CheckCircle2, Dumbbell, Loader2, PackageX, RotateCcw, Search, ShieldAlert, Wrench } from 'lucide-react';
 
-const LATE_FEE = 20; // BR11: 20 บาท / 15 นาที / ชิ้น
+const LATE_FEE = 20; // 20 บาท / 15 นาที / ชิ้น
 const BLOCK = 15;
 
 // UCS-5 ตรวจรับคืนอุปกรณ์และคำนวณค่าปรับ (BR10, BR11 Penalty Engine)
@@ -103,9 +103,9 @@ export const StaffReturnPage: React.FC = () => {
   return (
     <StaffLayout>
       <PageHeader
-        code="UCS-5 Return Desk"
+        code="Return Desk"
         eyebrow="เคาน์เตอร์บริการ"
-        title="ตรวจรับคืนอุปกรณ์ & คำนวณค่าปรับ (BR11)"
+        title="ตรวจรับคืนอุปกรณ์ & คำนวณค่าปรับ"
         subtitle="ตรวจสภาพอุปกรณ์ที่ส่งคืน (ปกติ / ชำรุด / สูญหาย) ระบบคำนวณค่าปรับคืนช้าและค่าเสียหายตามราคาประเมินอัตโนมัติ"
         actions={
           <Link to="/staff/equipment/borrow" className="btn-soft">
@@ -214,7 +214,7 @@ export const StaffReturnPage: React.FC = () => {
               <Calculator className="h-5 w-5" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-forest-950">ตรวจรับคืนอุปกรณ์ & คำนวณค่าปรับ (BR11)</h2>
+              <h2 className="text-lg font-bold text-forest-950">ตรวจรับคืนอุปกรณ์ & คำนวณค่าปรับ</h2>
               <p className="text-xs text-slate-500">{selectedBorrowing ? `${selectedBorrowing.equipmentName} × ${selectedBorrowing.quantity}` : 'เลือกรายการทางซ้ายเพื่อตรวจรับคืน'}</p>
             </div>
           </div>
@@ -247,7 +247,7 @@ export const StaffReturnPage: React.FC = () => {
 
               <div className="space-y-2 rounded-2xl bg-panel p-4 text-sm">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-semibold text-forest-900">การคำนวณตามสูตร Business Rule BR11 (ประมาณการ)</span>
+                  <span className="font-semibold text-forest-900">การคำนวณค่าปรับ (ประมาณการ)</span>
                   <span className="badge-slate">฿20 / 15 นาที / ชิ้น</span>
                 </div>
                 <div className="flex justify-between">

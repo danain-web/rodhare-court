@@ -48,7 +48,7 @@ export const ReceiptPage: React.FC = () => {
         <EmptyState
           icon={<ShieldCheck className="h-6 w-6" />}
           title="ยังไม่มีใบเสร็จรับเงิน"
-          description="ใบเสร็จจะถูกออกอัตโนมัติเมื่อเจ้าหน้าที่อนุมัติสลิปการชำระเงินแล้ว (UC-7)"
+          description="ใบเสร็จจะถูกออกอัตโนมัติเมื่อเจ้าหน้าที่อนุมัติสลิปการชำระเงินแล้ว"
           action={
             <Link to={`/my-bookings/${bookingId}`} className="btn-primary">
               กลับไปหน้ารายละเอียดการจอง
@@ -112,7 +112,7 @@ export const ReceiptPage: React.FC = () => {
           <div className="card space-y-5 bg-gradient-to-b from-white to-mint-50 p-6">
             <div className="flex items-center justify-between">
               <span className="badge-forest">DIGITAL PASS</span>
-              <span className="text-[11px] text-slate-500">เช็คอินก่อนเวลา 30 นาที (BR8)</span>
+              <span className="text-[11px] text-slate-500">เช็คอินก่อนเวลา 30 นาที</span>
             </div>
             <div className="text-center">
               <h2 className="text-2xl font-bold text-forest-950">บัตรผ่านเข้าสนามดิจิทัล</h2>
@@ -231,7 +231,7 @@ export const ReceiptPage: React.FC = () => {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-500">ตรวจสอบโดย:</span>
-                    <span className="badge-mint">เจ้าหน้าที่ (UC-7) • BR6 ยอดตรง</span>
+                    <span className="badge-mint">ตรวจโดยเจ้าหน้าที่ • ยอดตรง</span>
                   </div>
                 </div>
               </div>
@@ -276,9 +276,9 @@ export const ReceiptPage: React.FC = () => {
         </h2>
         <div className="grid gap-4 md:grid-cols-3">
           {[
-            { icon: <LogIn className="h-4 w-4" />, t: 'การเช็คอิน (BR8)', d: 'เช็คอินได้ก่อนเวลาเริ่มไม่เกิน 30 นาที แสดง QR Code แก่เจ้าหน้าที่หน้าเคาน์เตอร์' },
-            { icon: <RotateCcw className="h-4 w-4" />, t: 'การคืนอุปกรณ์ (BR10, BR11)', d: 'คืนภายในเวลาสิ้นสุดการจอง หากเกินคิดค่าปรับ 20 บาท / 15 นาที / ชิ้น' },
-            { icon: <Undo2 className="h-4 w-4" />, t: 'สิทธิ์ยกเลิก (BR12)', d: 'ยกเลิกล่วงหน้ามากกว่า 24 ชม. คืนเงิน 100% น้อยกว่า 24 ชม. คืนเงิน 50%' },
+            { icon: <LogIn className="h-4 w-4" />, t: 'การเช็คอิน', d: 'เช็คอินได้ก่อนเวลาเริ่มไม่เกิน 30 นาที แสดง QR Code แก่เจ้าหน้าที่หน้าเคาน์เตอร์' },
+            { icon: <RotateCcw className="h-4 w-4" />, t: 'การคืนอุปกรณ์', d: 'คืนภายในเวลาสิ้นสุดการจอง หากเกินคิดค่าปรับ 20 บาท / 15 นาที / ชิ้น' },
+            { icon: <Undo2 className="h-4 w-4" />, t: 'สิทธิ์ยกเลิก', d: 'ยกเลิกล่วงหน้ามากกว่า 24 ชม. คืนเงิน 100% น้อยกว่า 24 ชม. คืนเงิน 50%' },
           ].map((x) => (
             <div key={x.t} className="rounded-2xl bg-panel p-4">
               <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-white text-forest-700">{x.icon}</div>

@@ -151,10 +151,10 @@ export const StaffBorrowPage: React.FC = () => {
   return (
     <StaffLayout>
       <PageHeader
-        code="UCS-5 Operational Engine"
+        code="Check-in & Equipment"
         eyebrow="เคาน์เตอร์บริการ"
         title="ระบบเช็คอินเข้าสนามและส่งมอบอุปกรณ์กีฬา"
-        subtitle="ตรวจสอบสิทธิ์การเข้าสนามตามเวลา (BR8) บันทึกการจ่ายอุปกรณ์ (BR9) และไปยังหน้ารับคืนเพื่อคำนวณค่าปรับ (BR11)"
+        subtitle="ตรวจสอบสิทธิ์การเข้าสนามตามเวลา บันทึกการจ่ายอุปกรณ์ และไปยังหน้ารับคืนเพื่อคำนวณค่าปรับ"
         actions={
           <Link to="/staff/equipment/return" className="btn-soft">
             <RotateCcw className="h-4 w-4" /> ไปหน้ารับคืนอุปกรณ์
@@ -184,8 +184,8 @@ export const StaffBorrowPage: React.FC = () => {
             <LogIn className="h-5 w-5" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-forest-950">UCS-5.1 ค้นหาและเช็คอินเข้าใช้งานสนาม (Check-in Court)</h2>
-            <p className="text-xs text-slate-500">สแกน/กรอกรหัสการจองจาก Digital Pass ของลูกค้า ระบบตรวจสอบการชำระเงินและเงื่อนไขเวลา BR8</p>
+            <h2 className="text-xl font-bold text-forest-950">ค้นหาและเช็คอินเข้าใช้งานสนาม (Check-in Court)</h2>
+            <p className="text-xs text-slate-500">สแกน/กรอกรหัสการจองจาก Digital Pass ของลูกค้า ระบบตรวจสอบการชำระเงินและเวลาเช็คอิน</p>
           </div>
         </div>
         <form onSubmit={handleLookup} className="flex flex-col gap-3 sm:flex-row">
@@ -234,7 +234,7 @@ export const StaffBorrowPage: React.FC = () => {
                 <div className={`rounded-xl p-3 text-xs ${br8.ok ? 'bg-mint-50 text-forest-900 ring-1 ring-mint-200' : 'bg-amber-50 text-amber-900 ring-1 ring-amber-200'}`}>
                   <div className="flex items-center gap-1.5 font-semibold">
                     {br8.ok ? <CheckCircle2 className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
-                    เงื่อนไขสิทธิ์ BR8 {br8.ok ? 'ถูกต้อง' : 'ยังไม่ผ่าน'}
+                    เงื่อนไขการเช็คอิน {br8.ok ? 'ถูกต้อง' : 'ยังไม่ผ่าน'}
                   </div>
                   <div className="mt-0.5">{br8.text}</div>
                 </div>
@@ -257,7 +257,7 @@ export const StaffBorrowPage: React.FC = () => {
             </div>
             <div>
               <h2 className="text-xl font-bold text-forest-950">รายการจ่ายอุปกรณ์ (Dispatch)</h2>
-              <p className="text-xs text-slate-500">BR9: ยืมได้เฉพาะผู้ที่มีการจองสนามในวันและเวลานั้น</p>
+              <p className="text-xs text-slate-500">ยืมได้เฉพาะผู้ที่มีการจองสนามในวันและเวลานั้น</p>
             </div>
           </div>
 
@@ -329,7 +329,7 @@ export const StaffBorrowPage: React.FC = () => {
           </div>
           {selectedEq && (
             <div className="text-[11px] text-slate-500">
-              ค่าเช่า ฿{selectedEq.rentalFee}/ชิ้น • ราคาประเมิน ฿{selectedEq.replacementCost}/ชิ้น (ใช้คิดค่าปรับกรณีชำรุด/สูญหาย BR11)
+              ค่าเช่า ฿{selectedEq.rentalFee}/ชิ้น • ราคาประเมิน ฿{selectedEq.replacementCost}/ชิ้น (ใช้คิดค่าปรับกรณีชำรุด/สูญหาย)
             </div>
           )}
 
@@ -372,7 +372,7 @@ export const StaffBorrowPage: React.FC = () => {
             ))
           )}
           <div className="rounded-xl bg-rose-50 p-4 text-xs text-rose-900">
-            <div className="font-semibold">BR10 / BR11 — กำหนดคืนและค่าปรับ</div>
+            <div className="font-semibold">กำหนดคืนและค่าปรับ</div>
             ต้องคืนอุปกรณ์ภายในเวลาสิ้นสุดการจอง คืนช้าคิด 20 บาท / 15 นาที / ชิ้น ชำรุดหรือสูญหายคิดตามราคาประเมินของอุปกรณ์
           </div>
           <Link to="/staff/equipment/return" className="btn-soft w-full">
@@ -383,10 +383,10 @@ export const StaffBorrowPage: React.FC = () => {
 
       <section className="card-soft grid gap-3 p-5 text-xs text-slate-600 md:grid-cols-2">
         <div>
-          <strong className="text-forest-900">BR8 Check-in Tolerance:</strong> อนุญาตให้เช็คอินได้ก่อนเวลาเริ่มใช้งานไม่เกิน 30 นาที และต้องชำระเงินแล้วเท่านั้น
+          <strong className="text-forest-900">ช่วงเวลาเช็คอิน:</strong> อนุญาตให้เช็คอินได้ก่อนเวลาเริ่มใช้งานไม่เกิน 30 นาที และต้องชำระเงินแล้วเท่านั้น
         </div>
         <div>
-          <strong className="text-forest-900">BR9 Borrow Eligibility:</strong> ระบบปฏิเสธการยืมหากไม่มีการจองที่ชำระแล้วในวันและเวลานั้น
+          <strong className="text-forest-900">สิทธิ์การยืมอุปกรณ์:</strong> ระบบปฏิเสธการยืมหากไม่มีการจองที่ชำระแล้วในวันและเวลานั้น
         </div>
       </section>
     </StaffLayout>

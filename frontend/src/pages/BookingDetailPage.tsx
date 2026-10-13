@@ -121,7 +121,7 @@ export const BookingDetailPage: React.FC = () => {
         endTime: updateEndTime,
       });
       setShowUpdateModal(false);
-      setActionSuccess('แก้ไขวันและเวลาการจองเรียบร้อยแล้ว (BR5)');
+      setActionSuccess('แก้ไขวันและเวลาการจองเรียบร้อยแล้ว');
       refetch();
     } catch (err: any) {
       setUpdateError(err.response?.data?.message || 'Failed to update booking');
@@ -200,7 +200,7 @@ export const BookingDetailPage: React.FC = () => {
 
       {booking.status === 'PENDING_PAYMENT' && !slipPending && <CountdownBanner expiresAt={b.holdExpiresAt} />}
       {slipPending && (
-        <Alert tone="info" title="ส่งสลิปแล้ว — รอเจ้าหน้าที่ตรวจสอบ (UC-7)">
+        <Alert tone="info" title="ส่งสลิปแล้ว — รอเจ้าหน้าที่ตรวจสอบ">
           ระบบหยุดนับเวลา 15 นาทีแล้ว ระหว่างรอตรวจสอบไม่สามารถแก้ไขการจองได้
         </Alert>
       )}
@@ -219,7 +219,7 @@ export const BookingDetailPage: React.FC = () => {
               <h2 className="text-lg font-bold text-forest-950">รายละเอียดการจองสนาม</h2>
               {canModify && (
                 <button onClick={handleOpenUpdateModal} className="btn-soft px-3 py-1.5 text-xs">
-                  <Pencil className="h-3.5 w-3.5" /> เปลี่ยนวัน/เวลา (BR5)
+                  <Pencil className="h-3.5 w-3.5" /> เปลี่ยนวัน/เวลา
                 </button>
               )}
             </div>
@@ -287,7 +287,7 @@ export const BookingDetailPage: React.FC = () => {
           {payments.length > 0 && (
             <div className="card space-y-3 p-6">
               <h2 className="flex items-center gap-2 text-lg font-bold text-forest-950">
-                <Wallet className="h-5 w-5" /> ประวัติการส่งสลิป (PAYMENTS)
+                <Wallet className="h-5 w-5" /> ประวัติการส่งสลิป
               </h2>
               {payments.map((p: any) => (
                 <div key={p.paymentId} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-panel px-4 py-3 text-xs">
@@ -336,12 +336,12 @@ export const BookingDetailPage: React.FC = () => {
               )}
               {['CONFIRMED', 'PAYMENT_VERIFIED'].includes(booking.status) && (
                 <button onClick={handleCheckIn} disabled={isCheckingIn} className="btn-soft w-full">
-                  {isCheckingIn ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />} เช็คอินเข้าสนาม (BR8)
+                  {isCheckingIn ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />} เช็คอินเข้าสนาม
                 </button>
               )}
               {canModify && (
                 <button onClick={handleOpenCancelModal} className="btn-danger-soft w-full">
-                  <CircleX className="h-4 w-4" /> ยกเลิกการจองและขอคืนเงิน (BR12)
+                  <CircleX className="h-4 w-4" /> ยกเลิกการจองและขอคืนเงิน
                 </button>
               )}
             </div>
@@ -351,9 +351,9 @@ export const BookingDetailPage: React.FC = () => {
             <div className="flex items-center gap-2 font-semibold text-forest-900">
               <AlertCircle className="h-4 w-4" /> เงื่อนไขระบบ
             </div>
-            <div>• BR5: แก้ไขวัน/เวลาได้ก่อนเวลาใช้งานอย่างน้อย 24 ชั่วโมง</div>
-            <div>• BR8: เช็คอินได้ก่อนเวลาเริ่มไม่เกิน 30 นาที และต้องชำระเงินแล้ว</div>
-            <div>• BR12: ยกเลิกล่วงหน้า &gt; 24 ชม. คืน 100% / 1-24 ชม. คืน 50% / น้อยกว่า 1 ชม. ไม่คืนเงิน (เฉพาะรายการที่ชำระแล้ว)</div>
+            <div>• แก้ไขวัน/เวลาได้ก่อนเวลาใช้งานอย่างน้อย 24 ชั่วโมง</div>
+            <div>• เช็คอินได้ก่อนเวลาเริ่มไม่เกิน 30 นาที และต้องชำระเงินแล้ว</div>
+            <div>• ยกเลิกล่วงหน้า &gt; 24 ชม. คืน 100% / 1-24 ชม. คืน 50% / น้อยกว่า 1 ชม. ไม่คืนเงิน (เฉพาะรายการที่ชำระแล้ว)</div>
           </div>
         </div>
       </div>
@@ -364,7 +364,7 @@ export const BookingDetailPage: React.FC = () => {
         onClose={() => setShowUpdateModal(false)}
         title={
           <span className="flex items-center gap-2">
-            <Pencil className="h-5 w-5" /> แก้ไขวัน/เวลาการจอง (BR5)
+            <Pencil className="h-5 w-5" /> แก้ไขวัน/เวลาการจอง
           </span>
         }
       >
@@ -385,7 +385,7 @@ export const BookingDetailPage: React.FC = () => {
             </div>
           </div>
           <div className="rounded-xl bg-amber-50 p-3 text-xs text-amber-900">
-            การแก้ไขต้องทำล่วงหน้าอย่างน้อย 24 ชั่วโมงก่อนเวลาเริ่มใช้งานเดิม และช่วงเวลาใหม่ต้องว่าง (BR2)
+            การแก้ไขต้องทำล่วงหน้าอย่างน้อย 24 ชั่วโมงก่อนเวลาเริ่มใช้งานเดิม และช่วงเวลาใหม่ต้องว่าง
           </div>
           <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
             <button onClick={() => setShowUpdateModal(false)} className="btn-outline">
@@ -404,7 +404,7 @@ export const BookingDetailPage: React.FC = () => {
         onClose={() => setShowCancelModal(false)}
         title={
           <span className="flex items-center gap-2">
-            <CreditCard className="h-5 w-5" /> ยกเลิกการจองและคำนวณเงินคืน (BR12)
+            <CreditCard className="h-5 w-5" /> ยกเลิกการจองและคำนวณเงินคืน
           </span>
         }
       >

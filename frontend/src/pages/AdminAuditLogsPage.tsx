@@ -51,7 +51,7 @@ export const AdminAuditLogsPage: React.FC = () => {
   return (
     <StaffLayout>
       <PageHeader
-        code="BR16 Audit Trail"
+        code="Audit Trail"
         eyebrow="บริหารจัดการระบบ"
         title="บันทึกการทำงานของระบบ (Audit Logs)"
         subtitle="ตรวจสอบย้อนหลังว่าใครทำอะไร เมื่อใด ทั้งการจอง การชำระเงิน การยกเลิก และการแก้ไขข้อมูลหลัก พร้อมค่าก่อน-หลัง"

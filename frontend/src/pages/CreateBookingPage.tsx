@@ -138,20 +138,20 @@ export const CreateBookingPage: React.FC = () => {
     <CustomerLayout>
       <Breadcrumb
         items={[
-          { label: 'ค้นหาสนาม (UCS-2)', to: '/courts' },
+          { label: 'ค้นหาสนาม', to: '/courts' },
           { label: court?.name || 'สนาม', to: `/courts/${courtId}` },
-          { label: 'เลือกอุปกรณ์และยืนยัน (UCS-3.1)' },
+          { label: 'เลือกอุปกรณ์และยืนยัน' },
         ]}
       />
 
       <section className="card space-y-5 p-6">
         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div>
-            <div className="text-[11px] font-semibold text-slate-500">กระบวนการจองคอร์ทกีฬา (UCS-2.4 & UCS-3.1)</div>
+            <div className="text-[11px] font-semibold text-slate-500">กระบวนการจองคอร์ทกีฬา</div>
             <h1 className="text-2xl font-bold text-forest-950 md:text-3xl">รายละเอียดสนามและยืมอุปกรณ์กีฬา</h1>
           </div>
           <span className="badge-slate py-1.5">
-            <Clock className="h-3.5 w-3.5" /> ระบบจะล็อกสนามให้ 15 นาทีหลังกดยืนยันการจอง (BR3)
+            <Clock className="h-3.5 w-3.5" /> ระบบจะล็อกสนามให้ 15 นาทีหลังกดยืนยันการจอง
           </span>
         </div>
         <Stepper current={2} />
@@ -197,7 +197,7 @@ export const CreateBookingPage: React.FC = () => {
               </h2>
               <div className="grid gap-4 sm:grid-cols-3">
                 <div>
-                  <label className="label">วันที่เล่น (BR4 ≤ 30 วัน)</label>
+                  <label className="label">วันที่เล่น (ล่วงหน้าไม่เกิน 30 วัน)</label>
                   <input
                     type="date"
                     className="input"
@@ -250,7 +250,7 @@ export const CreateBookingPage: React.FC = () => {
               </div>
               <div className="flex-1 space-y-3">
                 <div>
-                  <div className="font-semibold">โค้ดส่วนลดและโปรโมชั่น (BR15)</div>
+                  <div className="font-semibold">โค้ดส่วนลดและโปรโมชั่น</div>
                   <div className="text-xs text-white/70">
                     ใช้ได้เฉพาะช่วงวันที่และเวลาที่กำหนด — ส่วนลดตามประเภทสมาชิกจะถูกคำนวณให้อัตโนมัติ
                   </div>
@@ -291,10 +291,10 @@ export const CreateBookingPage: React.FC = () => {
               <ShieldCheck className="h-4 w-4" /> ข้อกำหนดการใช้สนามตามระเบียบ
             </h3>
             {[
-              'BR1: ต้องเป็นสมาชิกสถานะปกติและเข้าสู่ระบบก่อนจองสนาม',
-              'BR2: ระบบตรวจการจองทับซ้อนแบบ Real-time — ช่วงเวลาที่ถูกจองแล้วจะไม่สามารถจองซ้ำได้',
-              'BR4: จองล่วงหน้าได้ไม่เกิน 30 วัน',
-              'BR8: เช็คอินเข้าสนามได้ก่อนเวลาเริ่มไม่เกิน 30 นาที',
+              'ต้องเป็นสมาชิกสถานะปกติและเข้าสู่ระบบก่อนจองสนาม',
+              'ระบบตรวจการจองทับซ้อนแบบ Real-time — ช่วงเวลาที่ถูกจองแล้วจะไม่สามารถจองซ้ำได้',
+              'จองล่วงหน้าได้ไม่เกิน 30 วัน',
+              'เช็คอินเข้าสนามได้ก่อนเวลาเริ่มไม่เกิน 30 นาที',
             ].map((t) => (
               <div key={t} className="flex items-start gap-2 text-xs text-slate-600">
                 <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-mint-600" /> {t}
@@ -317,7 +317,7 @@ export const CreateBookingPage: React.FC = () => {
             <div className="flex items-start gap-2 rounded-xl bg-panel p-3 text-xs text-slate-600">
               <Info className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
               <span>
-                <strong>ข้อควรทราบ:</strong> การส่งคืนอุปกรณ์ช้ากว่ากำหนดคิดค่าปรับ 20 บาท/15 นาที/ชิ้น (ตามกฎ BR11)
+                <strong>ข้อควรทราบ:</strong> การส่งคืนอุปกรณ์ช้ากว่ากำหนดคิดค่าปรับ 20 บาท/15 นาที/ชิ้น
               </span>
             </div>
 
@@ -369,7 +369,7 @@ export const CreateBookingPage: React.FC = () => {
                 <div className="text-[11px] text-mint-300">ใบสรุปคำสั่งจอง</div>
                 <h2 className="text-xl font-bold text-white">สรุปรายการคำนวณราคา</h2>
               </div>
-              <span className="badge bg-white/10 text-white">UCS-3.1 Active</span>
+              <span className="badge bg-white/10 text-white">สรุปรายการจอง</span>
             </div>
 
             <div className="space-y-3 text-sm">
@@ -422,7 +422,7 @@ export const CreateBookingPage: React.FC = () => {
             <div className="flex items-end justify-between border-t border-white/10 pt-4">
               <div>
                 <div className="text-xs font-semibold">ยอดสุทธิที่ต้องชำระ</div>
-                <div className="text-[10px] text-white/60">คำนวณจากหลังบ้าน (BR6 ยอดสลิปต้องตรงยอดนี้)</div>
+                <div className="text-[10px] text-white/60">ยอดเงินในสลิปต้องตรงกับยอดนี้</div>
               </div>
               <div className="text-4xl font-bold text-mint-300">
                 {(pb?.finalAmount ?? 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
@@ -437,7 +437,7 @@ export const CreateBookingPage: React.FC = () => {
                 </>
               ) : (
                 <>
-                  ยืนยันการจองและไปขั้นตอนสรุป (UCS-3.3) <ArrowRight className="h-5 w-5" />
+                  ยืนยันการจองและไปขั้นตอนสรุป <ArrowRight className="h-5 w-5" />
                 </>
               )}
             </button>

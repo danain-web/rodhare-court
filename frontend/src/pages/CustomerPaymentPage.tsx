@@ -165,14 +165,14 @@ export const CustomerPaymentPage: React.FC = () => {
         />
       )}
       {awaitingReview && (
-        <Alert tone="info" title="ส่งสลิปแล้ว — รอเจ้าหน้าที่ตรวจสอบ (UC-7)">
+        <Alert tone="info" title="ส่งสลิปแล้ว — รอเจ้าหน้าที่ตรวจสอบ">
           ระบบหยุดนับเวลา 15 นาทีแล้ว คุณจะได้รับการแจ้งเตือนเมื่อเจ้าหน้าที่อนุมัติหรือปฏิเสธสลิป
         </Alert>
       )}
       {booking && !isPending && (
         <Alert tone={booking.status === 'EXPIRED' ? 'error' : 'success'} title={`การจองนี้อยู่ในสถานะ: ${booking.status}`}>
           {booking.status === 'EXPIRED'
-            ? 'หมดเวลาชำระเงิน (BR3) การจองถูกยกเลิกอัตโนมัติ กรุณาทำรายการจองใหม่'
+            ? 'หมดเวลาชำระเงิน การจองถูกยกเลิกอัตโนมัติ กรุณาทำรายการจองใหม่'
             : 'ไม่ต้องชำระเงินเพิ่มเติมสำหรับการจองนี้'}
         </Alert>
       )}
@@ -293,7 +293,7 @@ export const CustomerPaymentPage: React.FC = () => {
                 <div className="flex items-start gap-2 rounded-xl bg-panel p-3 text-xs text-slate-600">
                   <Info className="mt-0.5 h-4 w-4 shrink-0 text-forest-600" />
                   <span>
-                    กรุณาโอนให้เท่ากับ <strong>{formatTHB(booking?.finalAmount)}</strong> พอดี ยอดในสลิปต้องตรงกับยอดการจองจึงจะอนุมัติได้ (BR6)
+                    กรุณาโอนให้เท่ากับ <strong>{formatTHB(booking?.finalAmount)}</strong> พอดี ยอดในสลิปต้องตรงกับยอดการจองจึงจะอนุมัติได้
                   </span>
                 </div>
               </div>
@@ -346,7 +346,7 @@ export const CustomerPaymentPage: React.FC = () => {
             </div>
 
             <div className="card-soft space-y-3 p-4">
-              <div className="text-sm font-semibold text-forest-950">ตรวจสอบความถูกต้องของข้อมูลตามสลิป (BR6 Verification)</div>
+              <div className="text-sm font-semibold text-forest-950">ตรวจสอบความถูกต้องของข้อมูลตามสลิป</div>
               <div className="grid gap-3 sm:grid-cols-3">
                 <div>
                   <label className="label">ช่องทางการชำระ</label>
@@ -380,12 +380,12 @@ export const CustomerPaymentPage: React.FC = () => {
                 </div>
               </div>
               <div className="text-[11px] text-slate-500">
-                ระบบตรวจสลิปอัตโนมัติ: สลิปซ้ำ (เลขอ้างอิง) • ยอดเงินตรงยอดจอง (BR6) • ความชัดเจนของภาพ — หากอ่านเลขอ้างอิงไม่ได้หรือภาพไม่ชัด
+                ระบบตรวจสลิปอัตโนมัติ: สลิปซ้ำ (เลขอ้างอิง) • ยอดเงินตรงยอดจอง • ความชัดเจนของภาพ — หากอ่านเลขอ้างอิงไม่ได้หรือภาพไม่ชัด
                 ระบบจะส่งให้พนักงานตรวจสอบแทน
               </div>
               {amountMismatch && (
                 <div className="rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-700">
-                  ยอดที่กรอก ({formatTHB(Number(amountInput))}) ไม่ตรงกับยอดการจอง ({formatTHB(booking?.finalAmount)}) — ระบบจะปฏิเสธตามกฎ BR6
+                  ยอดที่กรอก ({formatTHB(Number(amountInput))}) ไม่ตรงกับยอดการจอง ({formatTHB(booking?.finalAmount)}) — ระบบจะไม่อนุมัติสลิปนี้
                 </div>
               )}
             </div>
@@ -477,10 +477,10 @@ export const CustomerPaymentPage: React.FC = () => {
               <ShieldCheck className="h-4 w-4" /> เงื่อนไขและระเบียบสนาม (Terms & Rules)
             </h3>
             {[
-              { c: 'BR6: การตรวจสอบยอดเงิน', d: 'ยอดเงินในสลิปต้องตรงกับยอดรวมของระบบทุกประการ เจ้าหน้าที่จะตรวจก่อนอนุมัติ', tone: 'text-forest-700' },
-              { c: 'BR3: กำหนดเวลาชำระเงิน 15 นาที', d: 'หากพ้นกำหนดระบบจะยกเลิกการจองและปลดล็อกสนามสู่สาธารณะทันที', tone: 'text-amber-700' },
-              { c: 'BR8: การเข้าใช้และเช็คอิน', d: 'แสดงบัตรผ่านดิจิทัลเพื่อเช็คอินได้ก่อนเวลาเริ่มไม่เกิน 30 นาที', tone: 'text-forest-700' },
-              { c: 'BR12: การยกเลิกและคืนเงิน', d: 'ยกเลิกล่วงหน้ามากกว่า 24 ชม. คืนเงิน 100% / 1-24 ชม. คืน 50% / น้อยกว่า 1 ชม. ไม่คืนเงิน', tone: 'text-forest-700' },
+              { c: 'การตรวจสอบยอดเงิน', d: 'ยอดเงินในสลิปต้องตรงกับยอดรวมของระบบทุกประการ เจ้าหน้าที่จะตรวจก่อนอนุมัติ', tone: 'text-forest-700' },
+              { c: 'กำหนดเวลาชำระเงิน 15 นาที', d: 'หากพ้นกำหนดระบบจะยกเลิกการจองและปลดล็อกสนามสู่สาธารณะทันที', tone: 'text-amber-700' },
+              { c: 'การเข้าใช้และเช็คอิน', d: 'แสดงบัตรผ่านดิจิทัลเพื่อเช็คอินได้ก่อนเวลาเริ่มไม่เกิน 30 นาที', tone: 'text-forest-700' },
+              { c: 'การยกเลิกและคืนเงิน', d: 'ยกเลิกล่วงหน้ามากกว่า 24 ชม. คืนเงิน 100% / 1-24 ชม. คืน 50% / น้อยกว่า 1 ชม. ไม่คืนเงิน', tone: 'text-forest-700' },
             ].map((r) => (
               <div key={r.c} className="text-xs">
                 <div className={`font-semibold ${r.tone}`}>● {r.c}</div>

@@ -60,7 +60,7 @@ export const NotificationBell: React.FC = () => {
       {open && (
         <div className="card absolute right-0 z-50 mt-2 w-96 max-w-[90vw] p-4">
           <div className="mb-3 flex items-center justify-between border-b border-slate-100 pb-2">
-            <span className="text-sm font-bold text-forest-950">การแจ้งเตือน (BR7)</span>
+            <span className="text-sm font-bold text-forest-950">การแจ้งเตือน</span>
             <span className="text-[11px] text-slate-500">ยังไม่อ่าน {unread} / ทั้งหมด {notifications.length}</span>
           </div>
           <div className="max-h-80 space-y-2 overflow-y-auto">
@@ -129,7 +129,7 @@ export const Navbar: React.FC = () => {
   const isStaffSide = hasRole('STAFF') || hasRole('ADMIN') || hasRole('EXECUTIVE');
 
   const tabs = [
-    { to: '/courts', label: 'ค้นหาสนาม', code: 'UCS-2' },
+    { to: '/courts', label: 'ค้นหาสนาม', code: 'Courts' },
     ...(isAuthenticated
       ? [
           { to: '/my-bookings', label: 'รายการจองของฉัน', code: 'My Bookings' },
@@ -222,7 +222,7 @@ export const Footer: React.FC = () => (
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-medium text-slate-600">
         <span>ระเบียบการใช้งานสนาม</span>
         <span className="text-slate-300">•</span>
-        <span>นโยบายยกเลิกและคืนเงิน (BR12)</span>
+        <span>นโยบายยกเลิกและคืนเงิน</span>
         <span className="text-slate-300">•</span>
         <span>ติดต่อเจ้าหน้าที่เคาน์เตอร์กีฬา</span>
       </div>

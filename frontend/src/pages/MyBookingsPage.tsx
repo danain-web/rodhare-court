@@ -86,7 +86,7 @@ export const MyBookingsPage: React.FC = () => {
     try {
       const fullReason = [reason, reasonDetail].filter(Boolean).join(' - ');
       await executeCancelRefundApi(target.bookingId, fullReason || undefined);
-      setSuccess(`ยกเลิกการจอง ${target.bookingNumber} เรียบร้อยแล้ว${preview?.eligibleForRefund ? ' และส่งคำขอคืนเงินให้เจ้าหน้าที่ตรวจสอบ (UCS-6.4)' : ''}`);
+      setSuccess(`ยกเลิกการจอง ${target.bookingNumber} เรียบร้อยแล้ว${preview?.eligibleForRefund ? ' และส่งคำขอคืนเงินให้เจ้าหน้าที่ตรวจสอบ' : ''}`);
       setTarget(null);
       setPreview(null);
       refetch();
@@ -103,7 +103,7 @@ export const MyBookingsPage: React.FC = () => {
   return (
     <CustomerLayout>
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <Breadcrumb items={[{ label: 'รายการจองของฉัน (My Bookings)' }, { label: 'จัดการจองและขอยกเลิก (UCS-6.1)' }]} />
+        <Breadcrumb items={[{ label: 'รายการจองของฉัน (My Bookings)' }, { label: 'จัดการจองและขอยกเลิก' }]} />
         <div className="card flex items-center gap-3 px-4 py-2.5">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-mint-100 text-forest-700">
             <RotateCcw className="h-4 w-4" />
@@ -120,7 +120,7 @@ export const MyBookingsPage: React.FC = () => {
         <div className="relative flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div className="space-y-2">
             <span className="badge bg-white/10 text-mint-200">
-              <span className="h-1.5 w-1.5 rounded-full bg-mint-300" /> BR12 AUTOMATED REFUND SYSTEM
+              <span className="h-1.5 w-1.5 rounded-full bg-mint-300" /> AUTOMATED REFUND SYSTEM
             </span>
             <h1 className="text-3xl font-bold text-white">รายการจองของฉันและการขอคืนเงิน</h1>
             <p className="max-w-2xl text-sm text-white/70">
@@ -259,7 +259,7 @@ export const MyBookingsPage: React.FC = () => {
                 </div>
                 <div>
                   <h3 className="font-bold text-forest-950">คำขอยกเลิกและคำนวณเงินคืน</h3>
-                  <div className="text-[11px] text-slate-500">UCS-6.1 Automated BR12 Policy Engine</div>
+                  <div className="text-[11px] text-slate-500">คำนวณยอดเงินคืนอัตโนมัติตามระเบียบการยกเลิก</div>
                 </div>
               </div>
               {target && <span className="badge-mint">เป้าหมาย: #{target.bookingNumber.slice(-6)}</span>}
@@ -269,7 +269,7 @@ export const MyBookingsPage: React.FC = () => {
 
             {!target ? (
               <div className="rounded-xl bg-panel p-5 text-center text-xs text-slate-500">
-                เลือก "ขอยกเลิกการจองและคืนเงิน" จากรายการทางซ้าย เพื่อให้ระบบคำนวณยอดเงินคืนตามกฎ BR12
+                เลือก "ขอยกเลิกการจองและคืนเงิน" จากรายการทางซ้าย เพื่อให้ระบบคำนวณยอดเงินคืนตามระเบียบการยกเลิก
               </div>
             ) : !preview ? (
               <div className="flex items-center justify-center gap-2 py-6 text-xs text-slate-500">
@@ -291,7 +291,7 @@ export const MyBookingsPage: React.FC = () => {
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-500">เกณฑ์คำนวณเงินคืน (BR12):</span>
+                    <span className="text-slate-500">เกณฑ์คำนวณเงินคืน:</span>
                     <span className={`font-semibold ${preview.refundPercentage === 100 ? 'text-forest-700' : 'text-amber-700'}`}>
                       คืนเงิน {preview.refundPercentage}%
                     </span>
@@ -326,12 +326,12 @@ export const MyBookingsPage: React.FC = () => {
                 {preview.eligibleForRefund && (
                   <div className="rounded-xl border border-forest-200 bg-white p-3 text-xs">
                     <div className="font-semibold text-forest-950">ช่องทางการรับเงินคืน</div>
-                    <div className="text-slate-500">โอนคืนบัญชีต้นทางที่ชำระเงิน หลังเจ้าหน้าที่อนุมัติ (UCS-6.4)</div>
+                    <div className="text-slate-500">โอนคืนบัญชีต้นทางที่ชำระเงิน หลังเจ้าหน้าที่อนุมัติ</div>
                   </div>
                 )}
                 <label className="flex items-start gap-2 text-xs text-slate-600">
                   <input type="checkbox" className="mt-0.5 accent-forest-900" checked={accept} onChange={(e) => setAccept(e.target.checked)} />
-                  ข้าพเจ้ายืนยันการยกเลิกการจองนี้ และรับทราบว่าสิทธิ์การเข้าใช้สนามจะถูกปล่อยคืนสู่ระบบสาธารณะทันทีตามเงื่อนไข BR12
+                  ข้าพเจ้ายืนยันการยกเลิกการจองนี้ และรับทราบว่าสิทธิ์การเข้าใช้สนามจะถูกปล่อยคืนสู่ระบบสาธารณะทันทีตามระเบียบการยกเลิกและคืนเงิน
                 </label>
                 <button onClick={confirmCancel} disabled={!reason || !accept || busy} className="btn-danger w-full py-3">
                   {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
@@ -374,13 +374,13 @@ export const MyBookingsPage: React.FC = () => {
 
       <section className="card space-y-4 p-6">
         <span className="badge-mint">OFFICIAL REGULATIONS</span>
-        <h2 className="text-lg font-bold text-forest-950">ระเบียบและเงื่อนไขการยกเลิกการจองและขอคืนเงิน (Business Rule BR12)</h2>
+        <h2 className="text-lg font-bold text-forest-950">ระเบียบและเงื่อนไขการยกเลิกการจองและขอคืนเงิน</h2>
         <div className="grid gap-4 md:grid-cols-4">
           {[
             { tag: '100%', tone: 'bg-mint-500', t: 'ยกเลิกล่วงหน้ามากกว่า 24 ชม.', d: 'สมาชิกมีสิทธิ์ได้รับเงินคืนเต็มจำนวน 100% ของยอดที่ชำระ' },
             { tag: '50%', tone: 'bg-amber-500', t: 'ยกเลิกล่วงหน้าน้อยกว่า 24 ชม.', d: 'ได้รับเงินคืน 50% ของยอดที่ชำระ' },
-            { tag: 'UC-6.4', tone: 'bg-forest-900', t: 'ระยะเวลาการโอนเงินคืน', d: 'เจ้าหน้าที่ตรวจสอบและอนุมัติคำขอคืนเงินผ่าน UCS-6.4 ก่อนโอนคืน' },
-            { tag: 'BR3', tone: 'bg-rose-700', t: 'การจองที่ยังไม่ชำระเงิน', d: 'ยกเลิกได้ทันทีโดยไม่มียอดคืนเงิน และระบบคืนสนามสู่ตารางว่าง' },
+            { tag: 'โอนคืน', tone: 'bg-forest-900', t: 'ระยะเวลาการโอนเงินคืน', d: 'เจ้าหน้าที่ตรวจสอบและอนุมัติคำขอคืนเงินก่อนโอนคืน' },
+            { tag: 'ยังไม่ชำระ', tone: 'bg-rose-700', t: 'การจองที่ยังไม่ชำระเงิน', d: 'ยกเลิกได้ทันทีโดยไม่มียอดคืนเงิน และระบบคืนสนามสู่ตารางว่าง' },
           ].map((x) => (
             <div key={x.t} className="rounded-2xl bg-panel p-4">
               <span className={`badge text-white ${x.tone}`}>{x.tag}</span>

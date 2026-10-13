@@ -39,7 +39,7 @@ export const FinesPage: React.FC = () => {
   return (
     <CustomerLayout>
       <PageHeader
-        code="BR11 Fines"
+        code="Fines"
         eyebrow="ค่าปรับอุปกรณ์กีฬา"
         title="ค่าปรับและยอดค้างชำระของฉัน"
         subtitle="ค่าปรับคืนอุปกรณ์ล่าช้า (20 บาท / 15 นาที / ชิ้น) และค่าเสียหายตามราคาประเมิน — มีค่าปรับค้างชำระจะไม่สามารถจองสนามใหม่ได้"

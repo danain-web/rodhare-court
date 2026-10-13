@@ -53,7 +53,7 @@ export const PricingRatesPanel: React.FC<{ courts: Court[]; sports: SportType[] 
   return (
     <div className="card space-y-5 overflow-x-auto p-6">
       <div>
-        <h2 className="mb-1 text-lg font-bold text-forest-950">อัตราค่าบริการตามช่วงเวลาและประเภทสมาชิก (PRICING_RATES)</h2>
+        <h2 className="mb-1 text-lg font-bold text-forest-950">อัตราค่าบริการตามช่วงเวลาและประเภทสมาชิก</h2>
         <p className="text-xs text-slate-500">
           ลำดับการใช้ราคา: อัตราเฉพาะสนาม &gt; อัตราของประเภทกีฬา และอัตราของประเภทสมาชิกผู้จอง &gt; อัตราทั่วไป • ช่วงที่ไม่มีอัตราใช้ราคาพื้นฐานของสนาม
           แล้วหักส่วนลดตามประเภทสมาชิก

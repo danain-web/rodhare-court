@@ -37,7 +37,7 @@ export const AdminPromotionsPage: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminPromotions'] });
       setShowModal(false);
-      setSuccessMsg(`สร้างโปรโมชั่น ${code} เรียบร้อย (BR14 & BR15)`);
+      setSuccessMsg(`สร้างโปรโมชั่น ${code} เรียบร้อย`);
       resetForm();
     },
     onError: (err: any) => {
@@ -49,7 +49,7 @@ export const AdminPromotionsPage: React.FC = () => {
     e.preventDefault();
     setErrorMsg('');
     if (new Date(startDate) > new Date(endDate)) {
-      setErrorMsg('BR15: วันสิ้นสุดต้องไม่ก่อนวันเริ่มโปรโมชั่น');
+      setErrorMsg('วันสิ้นสุดต้องไม่ก่อนวันเริ่มโปรโมชั่น');
       return;
     }
     createMutation.mutate({ code, title, discountType, discountValue, minBookingHours, startDate, endDate });
@@ -63,10 +63,10 @@ export const AdminPromotionsPage: React.FC = () => {
   return (
     <StaffLayout>
       <PageHeader
-        code="BR14 / BR15"
+        code="Promotions"
         eyebrow="บริหารจัดการระบบ"
         title="จัดการโปรโมชั่นและส่วนลด"
-        subtitle="เฉพาะผู้ดูแลระบบเท่านั้นที่กำหนดโปรโมชั่นได้ (BR14) และโปรโมชั่นใช้ได้เฉพาะช่วงวันที่และเวลาที่กำหนด (BR15)"
+        subtitle="เฉพาะผู้ดูแลระบบเท่านั้นที่กำหนดโปรโมชั่นได้ และโปรโมชั่นใช้ได้เฉพาะช่วงวันที่และเวลาที่กำหนด"
         actions={
           <button onClick={() => setShowModal(true)} className="btn-primary">
             <Plus className="h-4 w-4" /> สร้างโปรโมชั่นใหม่
@@ -155,11 +155,11 @@ export const AdminPromotionsPage: React.FC = () => {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="label">วันเริ่ม (BR15)</label>
+              <label className="label">วันเริ่ม</label>
               <input type="date" required className="input" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
             </div>
             <div>
-              <label className="label">วันสิ้นสุด (BR15)</label>
+              <label className="label">วันสิ้นสุด</label>
               <input type="date" required className="input" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
             </div>
           </div>
