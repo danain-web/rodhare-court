@@ -1,0 +1,131 @@
+
+# PHASE 7
+## Update Booking + Cancellation + Refund
+
+---
+
+# 1. UPDATE BOOKING
+
+Customer สามารถแก้:
+
+Date
+Start Time
+End Time
+Equipment
+
+---
+
+# BR9
+
+สามารถแก้ไขได้เฉพาะก่อนเวลาใช้งานอย่างน้อย 24 ชั่วโมง
+
+ถ้าเหลือน้อยกว่า 24 ชั่วโมง:
+
+Reject
+
+Message:
+
+"ไม่สามารถแก้ไขการจองได้ เนื่องจากเหลือเวลาไม่ถึง 24 ชั่วโมงก่อนเริ่มใช้งาน"
+
+---
+
+# 2. UPDATE VALIDATION
+
+ต้องตรวจใหม่ทั้งหมด:
+
+- Court Availability
+- Operating Hours
+- Pricing
+- Equipment
+- Promotion
+- Fine
+- 30-Day Rule
+
+---
+
+# 3. CANCEL
+
+Customer:
+
+/my-bookings/:id
+
+กด:
+
+Cancel Booking
+
+ระบบแสดง:
+
+Booking Amount
+Refund Percentage
+Refund Amount
+
+---
+
+# 4. BR6
+
+Refund:
+
+80%
+
+ตัวอย่าง:
+
+Booking = 500
+
+Refund = 400
+
+---
+
+# 5. REFUND REQUEST
+
+สร้าง:
+
+REFUND_REQUESTS
+
+Status:
+
+PENDING
+APPROVED
+REJECTED
+PAID
+
+---
+
+# 6. CANCEL TRANSACTION
+
+เมื่อ Cancel:
+
+BOOKING → CANCELLED
+
+Equipment Stock → คืน
+
+สร้าง Refund Request
+
+สร้าง Booking History
+
+สร้าง Notification
+
+สร้าง Audit Log
+
+ทั้งหมดต้อง Transaction
+
+---
+
+# 7. NO REFUND
+
+หากไม่เข้าเงื่อนไข:
+
+Refund = 0
+
+และแสดงเหตุผล
+
+---
+
+# 8. TEST
+
+1. Cancel สำเร็จ
+2. Refund 80%
+3. Cancel ไม่เข้าเงื่อนไข
+4. Update >24 ชั่วโมง
+5. Update <24 ชั่วโมง
+6. Update เป็นเวลาชน Booking
+7. Equipment คืน Stock

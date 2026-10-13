@@ -1,0 +1,24 @@
+# Dependencies / build output
+node_modules/
+dist/
+coverage/
+
+# Secrets — ห้าม commit เด็ดขาด (.env.example commit ได้)
+.env
+.env.*
+!.env.example
+
+# ไฟล์สลิปเก่าที่เคยเก็บลง disk (ตอนนี้ย้ายไป Supabase Storage แล้ว)
+backend/uploads/
+
+# เอกสาร/ไฟล์ส่วนตัวที่ไม่ใช่ source code
+*.zip
+*.pdf
+*.docx
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log

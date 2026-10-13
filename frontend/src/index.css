@@ -1,0 +1,141 @@
+@import "tailwindcss";
+
+/* =====================================================================
+   Barbie Sports Arena — Design System (อิงจาก UI Prototype UCS-2 ถึง UCS-9)
+   - forest: เขียวเข้ม (เมนูที่เลือก, ปุ่มหลัก, แผงสรุปสีเข้ม)
+   - mint:   เขียวมิ้นต์ (ปุ่มเน้น, ป้ายสถานะ, สล็อตว่าง)
+   - canvas: พื้นหลังฟ้าเทาอ่อน
+   ===================================================================== */
+@theme {
+  --font-sans: 'Prompt', ui-sans-serif, system-ui, 'Segoe UI', sans-serif;
+
+  --color-forest-50: #eef7f3;
+  --color-forest-100: #d6ece2;
+  --color-forest-200: #a9d6c2;
+  --color-forest-500: #1f7a5c;
+  --color-forest-600: #166048;
+  --color-forest-700: #11503c;
+  --color-forest-800: #0d4232;
+  --color-forest-900: #0a3528;
+  --color-forest-950: #06231a;
+
+  --color-mint-50: #ecfdf7;
+  --color-mint-100: #d0faec;
+  --color-mint-200: #a7f3d9;
+  --color-mint-300: #6ee9c4;
+  --color-mint-400: #3fd8ac;
+  --color-mint-500: #16c08f;
+  --color-mint-600: #0ea077;
+
+  --color-canvas: #f3f6fb;
+  --color-panel: #eaf0f9;
+  --color-ink: #0f1f1a;
+}
+
+@layer base {
+  html {
+    background-color: var(--color-canvas);
+  }
+  body {
+    @apply bg-canvas text-slate-800 font-sans;
+  }
+  h1, h2, h3, h4 {
+    @apply text-ink;
+  }
+}
+
+@layer components {
+  /* การ์ดสีขาวมุมโค้งเงาอ่อน */
+  .card {
+    @apply bg-white rounded-2xl border border-slate-200/70 shadow-[0_4px_24px_-12px_rgba(15,31,26,0.18)];
+  }
+  .card-soft {
+    @apply bg-panel rounded-2xl;
+  }
+  .card-dark {
+    @apply rounded-2xl bg-gradient-to-br from-forest-900 to-forest-950 text-white shadow-xl;
+  }
+
+  /* ปุ่ม */
+  .btn,
+  .btn-primary,
+  .btn-mint,
+  .btn-soft,
+  .btn-outline,
+  .btn-danger,
+  .btn-danger-soft {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply bg-forest-900 text-white hover:bg-forest-800 shadow-sm;
+  }
+  .btn-mint {
+    @apply bg-mint-300 text-forest-950 hover:bg-mint-200 shadow-sm;
+  }
+  .btn-soft {
+    @apply bg-panel text-forest-900 hover:bg-forest-100;
+  }
+  .btn-outline {
+    @apply border border-slate-300 bg-white text-slate-700 hover:border-forest-500 hover:text-forest-800;
+  }
+  .btn-danger {
+    @apply bg-rose-800 text-white hover:bg-rose-700 shadow-sm;
+  }
+  .btn-danger-soft {
+    @apply bg-rose-50 text-rose-700 hover:bg-rose-100;
+  }
+
+  /* ฟอร์ม */
+  .label {
+    @apply mb-1.5 block text-xs font-semibold text-slate-600;
+  }
+  .input {
+    @apply w-full rounded-xl border border-slate-200 bg-panel/60 px-3.5 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 outline-none transition focus:border-forest-500 focus:bg-white focus:ring-2 focus:ring-mint-200;
+  }
+
+  /* ป้าย */
+  .badge,
+  .badge-mint,
+  .badge-forest,
+  .badge-amber,
+  .badge-rose,
+  .badge-slate,
+  .badge-blue {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold;
+  }
+  .badge-mint {
+    @apply bg-mint-100 text-forest-800;
+  }
+  .badge-forest {
+    @apply bg-forest-900 text-white;
+  }
+  .badge-amber {
+    @apply bg-amber-100 text-amber-800;
+  }
+  .badge-rose {
+    @apply bg-rose-100 text-rose-700;
+  }
+  .badge-slate {
+    @apply bg-slate-100 text-slate-600;
+  }
+  .badge-blue {
+    @apply bg-sky-100 text-sky-800;
+  }
+
+  .eyebrow {
+    @apply text-[11px] font-semibold uppercase tracking-wider text-forest-600;
+  }
+  .muted {
+    @apply text-xs text-slate-500;
+  }
+}
+
+/* แถบเลื่อนบาง */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: #c9d5e3;
+  border-radius: 999px;
+}
