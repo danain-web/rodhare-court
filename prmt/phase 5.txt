@@ -1,0 +1,171 @@
+
+# PHASE 5
+## Equipment Borrowing / Return / Fine
+
+สร้างระบบยืม-คืนอุปกรณ์จริง
+
+---
+
+# 1. Equipment
+
+แสดง:
+
+Equipment Name
+Total Stock
+Available Stock
+Rental Price
+Late Fee Per Hour
+Replacement Cost
+
+---
+
+# 2. BR4
+
+ผู้ใช้ต้องมี Booking ในวันและเวลานั้น
+
+หากไม่มี Booking:
+
+Reject
+
+Message:
+
+"ไม่สามารถยืมอุปกรณ์ได้ เนื่องจากไม่มีการจองสนามในช่วงเวลานี้"
+
+---
+
+# 3. Borrow
+
+Staff เปิด:
+
+/staff/equipment/borrow
+
+กรอก:
+
+Booking ID
+
+ระบบตรวจ:
+
+- Booking Exists
+- Booking Status
+- Current Time
+- Court
+- Booking Period
+- Equipment
+
+จากนั้นสร้าง:
+
+EQUIPMENT_BORROWINGS
+
+และลด Stock
+
+---
+
+# 4. Return
+
+Staff เปิด:
+
+/staff/equipment/return
+
+กรอก Booking ID
+
+ระบบแสดง Equipment ที่ยืม
+
+Staff เลือก:
+
+NORMAL
+DAMAGED
+LOST
+
+---
+
+# 5. BR7
+
+ต้องคืนภายใน End Time
+
+หากเกินเวลา:
+
+คำนวณ Late Fee
+
+เช่น:
+
+2 ชั่วโมง
+
+Late Fee Per Hour = 20
+
+Fine = 40
+
+---
+
+# 6. BR5
+
+ถ้า:
+
+DAMAGED
+
+หรือ
+
+LOST
+
+สร้าง FINES
+
+จำนวนเงินใช้:
+
+Replacement Cost
+
+---
+
+# 7. Outstanding Fine
+
+ถ้า User มี Fine ค้าง:
+
+ห้ามสร้าง Booking ใหม่
+
+แสดง:
+
+"ไม่สามารถจองสนามได้ เนื่องจากมีค่าปรับค้างชำระ"
+
+---
+
+# 8. Database
+
+ต้อง Update:
+
+EQUIPMENT
+EQUIPMENT_BORROWINGS
+FINES
+
+---
+
+# 9. Test
+
+ทดสอบ:
+
+1. Borrow สำเร็จ
+2. ไม่มี Booking → Reject
+3. Stock ไม่พอ
+4. Return ปกติ
+5. Return Late
+6. Damaged
+7. Lost
+8. Fine Block Booking
+
+---
+
+# 10. DEMO
+
+แสดง:
+
+ก่อนยืม:
+Stock = 10
+
+Borrow 2
+
+หลังยืม:
+Stock = 8
+
+Return:
+
+1 Normal
+1 Damaged
+
+ระบบต้องสร้าง Fine ให้ชิ้นที่ Damaged

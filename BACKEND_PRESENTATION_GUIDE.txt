@@ -1,0 +1,610 @@
+=====================================================================
+  RODHARE COURT — คู่มือ Backend สำหรับเตรียมนำเสนอ / ตอบคำถาม
+  (สรุปจากโค้ดจริงใน backend/ และ database/)
+=====================================================================
+
+สารบัญ
+  1. ภาพรวมระบบ + Tech stack
+  2. สถาปัตยกรรม / โครงสร้างโฟลเดอร์ (Layered Architecture)
+  3. ฐานข้อมูล: ตารางทั้งหมด + ความสัมพันธ์
+  4. Constraints ที่ควรรู้ (จุดเด่นเวลาโดนถาม)
+  5. Normalization (3NF) + เหตุผลที่เก็บค่าซ้ำบางคอลัมน์
+  6. สถานะการจอง (State machine)
+  7. Business Rules (BR) ทั้งหมด + อยู่ตรงไหนในโค้ด
+  8. ฟังก์ชันหลัก: จองสนาม → ส่งสลิป → อนุมัติ → ใบเสร็จ (SQL เบื้องหลัง)
+  9. ฟังก์ชันรอง: ยกเลิก/คืนเงิน, แก้ไขการจอง, เช็คอิน, ยืม-คืนอุปกรณ์, ค่าปรับ
+ 10. การคิดราคา (Pricing)
+ 11. Concurrency: กันจองซ้อนเมื่อหลายคนกดพร้อมกัน
+ 12. Security
+ 13. Error handling
+ 14. API Endpoints ทั้งหมด
+ 15. Environment variables / Deploy / Test
+ 16. บัญชีทดสอบ + ลำดับ Demo
+ 17. คำถามที่น่าจะโดนถาม + คำตอบ
+ 18. ข้อจำกัดของระบบ (ตอบตรง ๆ ถ้าโดนถาม)
+
+
+=====================================================================
+1. ภาพรวมระบบ + TECH STACK
+=====================================================================
+ระบบจองสนามกีฬาออนไลน์ (แบดมินตัน, บาสเกตบอล, ฟุตซอล, เทนนิส)
+ผู้ใช้ 4 บทบาท (roles):
+  - CUSTOMER  : จองสนาม, ส่งสลิป, ยกเลิก/ขอคืนเงิน, ดูใบเสร็จ, ชำระค่าปรับ
+  - STAFF     : ตรวจ/อนุมัติสลิป, เช็คอิน, ยืม-คืนอุปกรณ์, อนุมัติคืนเงิน
+  - ADMIN     : จัดการสนาม/อุปกรณ์/โปรโมชั่น/อัตราราคา, ดู Audit log (+ทำงานแบบ STAFF ได้)
+  - EXECUTIVE : ดูรายงาน/สถิติ (dashboard ผู้บริหาร)
+
+Tech stack ฝั่ง Backend:
+  - Node.js >= 20 + TypeScript
+  - Express 5 (web framework)
+  - PostgreSQL บน Supabase (ต่อผ่าน driver "pg" — เขียน SQL เอง ไม่ใช้ ORM)
+  - Supabase Storage (เก็บรูปสลิป, bucket แบบ private)
+  - zod (ตรวจ input), bcryptjs (hash รหัสผ่าน), jsonwebtoken (JWT)
+  - helmet, cors, cookie-parser, express-rate-limit (security)
+  - multer (รับไฟล์สลิป แบบ memory storage)
+  - Jest + Supertest + embedded-postgres (เทสต์)
+
+Deploy:
+  Browser → Vercel (React + rewrite /api/*) → Render (Express API) → Supabase PostgreSQL
+                                                                  └→ Supabase Storage
+  เหตุผลที่ใช้ Vercel rewrite: เบราว์เซอร์มองว่า cookie เป็น first-party (โดเมนเดียวกัน)
+  → Safari/เบราว์เซอร์ที่บล็อก third-party cookie ก็ login ได้ และใช้ SameSite=Lax ได้
+
+หมายเหตุประวัติ: เดิมระบบใช้ Oracle (โฟลเดอร์ legacy-oracle/) แล้วย้ายมา PostgreSQL/Supabase
+  เช่น Oracle trigger → ให้ backend บันทึก history/audit เอง,
+       function-based index → partial unique index, RETURNING INTO → RETURNING
+
+
+=====================================================================
+2. สถาปัตยกรรม / โครงสร้างโฟลเดอร์
+=====================================================================
+backend/src/
+  server.ts        จุดเริ่ม: ต่อ DB, เปิด server, ตั้ง background job (setInterval), graceful shutdown
+  app.ts           ลำดับ middleware: trust proxy → request id → helmet → CORS → cookie →
+                   CSRF check → body parser (100kb / 8mb เฉพาะรูปสนาม) → routes → 404 → error handler
+  config/env.ts    อ่าน .env + validateConfig (ค่าผิด = ไม่ยอม start) + BUSINESS_RULES + ตั้ง TZ
+  config/db.ts     Pool ของ pg, withTransaction(), withConnection(), supabaseAdmin
+  routes/          กำหนด URL + middleware (requireAuth, requireRole, rate limit)
+  controllers/     รับ req → validate ด้วย zod → เรียก service → ส่ง response
+  services/        Business logic + กฎทางธุรกิจ (BR) + เปิด Transaction
+  repositories/    SQL ล้วน ๆ (parameterized query $1, $2 ...)
+  validators/      zod schema ของ input แต่ละ endpoint
+  middleware/      auth, security (CSRF, rate limit), error, notFound
+  utils/           jwt, password, datetime, promptpay (สร้าง QR), slipStorage, appError
+
+Flow ของ 1 request:
+  Route → Middleware (auth/role/limit) → Controller (zod) → Service (BR + Transaction)
+        → Repository (SQL) → PostgreSQL
+  error ที่ไหนก็ตาม → error.middleware.ts แปลงเป็น JSON + HTTP status ที่ถูกต้อง
+
+Transaction helper (config/db.ts):
+  withTransaction(fn) = BEGIN; SET LOCAL TIME ZONE 'Asia/Bangkok' → fn → COMMIT
+                        ถ้า error → ROLLBACK ทั้งหมด (atomic)
+  withConnection ก็ห่อด้วย transaction เหมือนกัน เพราะ Supabase Transaction pooler
+  (port 6543) ไม่จำค่า SET ข้าม transaction → ต้อง SET LOCAL ทุกครั้งเพื่อให้เวลาเป็นเวลาไทย
+
+
+=====================================================================
+3. ฐานข้อมูล: ตารางทั้งหมด 21 ตาราง (database/supabase_schema.sql)
+=====================================================================
+ทุกตารางมี created_at, created_by, updated_at, updated_by (FK → users, ON DELETE SET NULL)
+
+[กลุ่มผู้ใช้]
+  roles            (role_id PK, role_name UNIQUE)
+  member_types     (member_type_id PK, type_name UNIQUE, discount_percent, max_advance_days)
+                   EXTERNAL 0% / STUDENT 10% / PERSONNEL 15%
+  users            (user_id PK, username UNIQUE, email UNIQUE, password_hash, member_type_id FK, is_active)
+  user_roles       (PK ประกอบ user_id + role_id) → ตารางเชื่อม M:N ระหว่าง users กับ roles
+  user_sessions    (session_id PK, user_id FK, token_hash, expires_at) → ใช้เพิกถอน token ตอน logout
+
+[กลุ่มสนาม/ราคา]
+  sport_types           (sport_type_id PK, name UNIQUE)
+  courts                (court_id PK, sport_type_id FK, code UNIQUE, hourly_rate, status AVAILABLE/MAINTENANCE/CLOSED)
+  court_operating_hours (court_id FK, day_of_week 0-6, open_time, close_time) UNIQUE(court_id, day_of_week)
+  pricing_rates         (court_id / sport_type_id / member_type_id, day_type, start_time, end_time, hourly_rate)
+  promotions            (code UNIQUE, discount_type PERCENT/FIXED, ช่วงวัน, ช่วงเวลา, min_booking_hours)
+
+[กลุ่มอุปกรณ์]
+  equipment             (sport_type_id FK, total_quantity, available_quantity, rental_fee, replacement_cost)
+
+[กลุ่มการจอง — หัวใจของระบบ]
+  bookings               (booking_id PK, booking_number UNIQUE, user_id FK, court_id FK,
+                          booking_date, start_time, end_time, total_court_fee, total_equipment_fee,
+                          discount_amount, final_amount, status, promotion_id FK, hold_expires_at ...)
+  booking_status_history (booking_id FK, status, notes, changed_by) → ประวัติทุกครั้งที่สถานะเปลี่ยน
+  booking_equipment      (booking_id FK, equipment_id FK, quantity, unit_rental_fee, subtotal)
+                          → ตารางเชื่อม M:N ระหว่าง bookings กับ equipment (อุปกรณ์ที่จองไว้)
+  equipment_borrowings   (booking_id FK, equipment_id FK, quantity, expected_return_at, actual_return_at, status)
+                          → การยืมจริงหน้างาน (แยกจาก booking_equipment ที่เป็นแค่ "จองไว้")
+  fines                  (borrowing_id FK, booking_id FK, fine_type LATE_RETURN/DAMAGE/LOSS, amount, status)
+
+[กลุ่มการเงิน]
+  payments         (booking_id FK, amount, slip_url, slip_reference, status PENDING/VERIFIED/REJECTED,
+                    verification_method AUTO/MANUAL, verified_by FK)
+  receipts         (receipt_number UNIQUE, booking_id FK, payment_id FK UNIQUE → 1 payment = 1 ใบเสร็จ)
+  refund_requests  (booking_id FK, user_id FK, requested_amount, refund_percentage, status, approved_by FK)
+
+[กลุ่มระบบ]
+  notifications    (user_id FK, booking_id FK, title, message, type, is_read)  → BR7
+  audit_logs       (user_id, action, entity_name, entity_id, old_values JSONB, new_values JSONB, ip) → BR16
+
+Cardinality หลัก (ใช้ตอนอธิบาย ER):
+  users 1 ─ N bookings          courts 1 ─ N bookings         sport_types 1 ─ N courts
+  bookings 1 ─ N payments       payments 1 ─ 0..1 receipts    bookings 1 ─ N booking_status_history
+  bookings M ─ N equipment (ผ่าน booking_equipment)
+  users M ─ N roles (ผ่าน user_roles)
+  bookings 1 ─ N equipment_borrowings 1 ─ N fines
+  member_types 1 ─ N users      promotions 1 ─ N bookings
+
+
+=====================================================================
+4. CONSTRAINTS ที่ควรรู้ (จุดขาย "ระบบป้องกันที่ระดับฐานข้อมูล")
+=====================================================================
+[กันจองซ้อน — สำคัญที่สุด] migration 002
+  ex_bk_no_overlap : EXCLUDE USING gist (court_id WITH =, booking_period(...) WITH &&)
+                     WHERE status IN ('PENDING_PAYMENT','PAYMENT_VERIFIED','CONFIRMED','CHECKED_IN')
+  - booking_period() แปลง date + 'HH:MM' เป็น tsrange แบบ [เริ่ม, จบ)
+    → 10:00–11:00 กับ 11:00–12:00 ไม่ถือว่าทับ
+  - นับเฉพาะการจองที่ "ยังถือสนาม" ยกเลิก/หมดเวลา/เสร็จแล้ว ไม่บล็อก
+  - ต้องใช้ extension btree_gist (เพื่อเทียบ = บน integer ใน GiST index)
+  - ถ้าชน → PostgreSQL error 23P01 → backend ตอบ 409 "ช่วงเวลานี้ถูกจองแล้ว"
+
+[ด้านการเงิน]
+  chk_bk_final         final_amount = total_court_fee + total_equipment_fee - discount_amount
+  uq_pay_verified_booking  partial unique index: 1 การจองมี payment VERIFIED ได้แค่ 1 รายการ (กันอนุมัติซ้ำ)
+  uq_pay_pending_booking   1 การจองมีสลิปรอตรวจ (PENDING) ได้แค่ 1 รายการ
+  uq_pay_slip_ref      เลขอ้างอิงสลิปห้ามซ้ำ (ยกเว้นที่ถูก REJECTED) → กันใช้สลิปซ้ำ
+  receipts.payment_id UNIQUE → 1 payment ออกใบเสร็จได้ใบเดียว
+  uq_rf_active_booking 1 การจองมีคำขอคืนเงินที่ยัง active ได้ 1 รายการ
+  chk_pay_verifier     ถ้าไม่ใช่ PENDING ต้องมี verified_at และ (AUTO หรือมี verified_by)
+  chk_pay_reject       REJECTED ต้องมี rejection_reason
+  chk_pay_slip_mime / chk_pay_slip_size  รูปเท่านั้น (jpeg/png/webp) ≤ 5MB
+
+[ด้านสถานะ/ข้อมูล]
+  chk_bk_status   สถานะต้องเป็น 1 ใน 8 ค่า
+  chk_bk_time     end_time > start_time
+  chk_bk_hold     ถ้า PENDING_PAYMENT ต้องมี hold_expires_at
+  chk_bk_cancel   ถ้า CANCELLED/REFUNDED ต้องมี cancelled_at
+  chk_bk_checkin  ถ้า CHECKED_IN ต้องมี checked_in_at
+  chk_eq_stock    0 ≤ available_quantity ≤ total_quantity  (สต็อกติดลบไม่ได้)
+  chk_be_subtotal subtotal = quantity * unit_rental_fee
+  chk_users_email regex รูปแบบ email
+  uq_users_username_ci / uq_users_email_ci  unique แบบไม่สนตัวพิมพ์ (LOWER())
+  chk_promo_value PERCENT ต้อง ≤ 100
+  uq_fn_borrow_type  1 การยืม มีค่าปรับแต่ละประเภทได้ครั้งเดียว
+
+[Security ระดับ DB] migration 003
+  เปิด Row Level Security ทุกตาราง (ไม่มี policy) → ใครถือ anon key ยิง Supabase REST ตรง ๆ
+  อ่านไม่ได้เลย (รวม password_hash) แต่ backend ต่อด้วย role เจ้าของตาราง จึงไม่โดน RLS
+
+Index สำคัญ:
+  idx_bk_court_date (court_id, booking_date, start_time) → ใช้ตอนตรวจ overlap / ดูตารางว่าง
+  idx_bk_status_hold (status, hold_expires_at)          → ใช้ตอน job หาการจองค้างชำระ
+  idx_pay_status_time, idx_nt_user, idx_al_entity ...
+
+
+=====================================================================
+5. NORMALIZATION (3NF)
+=====================================================================
+- ทุกตารางมี PK, ค่าในคอลัมน์เป็น atomic (1NF)
+- ตารางเชื่อม M:N แยกออกมา: user_roles, booking_equipment (2NF — ไม่มี partial dependency)
+- ข้อมูลที่ขึ้นกับ entity อื่นแยกตาราง: ส่วนลดอยู่ที่ member_types ไม่ได้อยู่ที่ users,
+  ชื่อกีฬาอยู่ sport_types ไม่ได้อยู่ courts (3NF — ไม่มี transitive dependency)
+
+ตัวอย่าง normalize ที่ใช้เล่าได้: users
+  ก่อน: users(user_id, username, ..., member_type_name, discount_percent)
+        → discount_percent ขึ้นกับ member_type_name ไม่ใช่ user_id (transitive dependency)
+  หลัง: users(user_id, ..., member_type_id FK) + member_types(member_type_id, type_name, discount_percent)
+  หรือ bookings กับ equipment: แยก booking_equipment เพราะ 1 การจองมีอุปกรณ์หลายชิ้น
+
+คอลัมน์ที่ "ดูเหมือนซ้ำ" แต่ตั้งใจเก็บ (ถ้าโดนถามว่าผิด 3NF ไหม):
+  - bookings.total_court_fee / final_amount, booking_equipment.unit_rental_fee
+    → เป็น "snapshot ราคา ณ เวลาที่จอง" ถ้าแอดมินเปลี่ยนราคาทีหลัง ยอดเก่าต้องไม่เปลี่ยน
+      (เป็นข้อเท็จจริงทางธุรกิจของการจองครั้งนั้น ไม่ใช่ค่าที่คำนวณได้จากตารางอื่นเสมอ)
+    และมี CHECK บังคับให้สอดคล้องกัน (chk_bk_final, chk_be_subtotal)
+  - equipment.available_quantity → ตัวนับสต็อก ทำให้ตัด/คืนสต็อกแบบ atomic ได้
+    ด้วย UPDATE ... WHERE available_quantity >= n (เร็วกว่ารวมจากทุกการจองทุกครั้ง)
+  - receipts.total_amount → เอกสารทางการเงินต้องคงที่
+
+
+=====================================================================
+6. สถานะการจอง (BOOKING STATE MACHINE)
+=====================================================================
+  PENDING_PAYMENT ──ส่งสลิป──► (payment PENDING, หยุดนับเวลา) ──พนักงานอนุมัติ──► CONFIRMED
+        │                                  └──พนักงานปฏิเสธ──► PENDING_PAYMENT (เริ่มนับ 15 นาทีใหม่)
+        ├──ไม่ส่งสลิปใน 15 นาที──► EXPIRED  (job อัตโนมัติ คืนสนาม+อุปกรณ์)
+        └──ลูกค้ายกเลิก──► CANCELLED
+  CONFIRMED ──เช็คอิน──► CHECKED_IN ──หมดเวลา──► COMPLETED
+  CONFIRMED ──หมดเวลา (ไม่ได้มา)──► COMPLETED
+  CONFIRMED ──ยกเลิก──► CANCELLED ──พนักงานอนุมัติคืนเงิน──► REFUNDED
+  (PAYMENT_VERIFIED เป็นสถานะที่ schema รองรับ ปัจจุบันอนุมัติแล้วข้ามไป CONFIRMED เลย)
+
+payments.status:  PENDING → VERIFIED หรือ REJECTED
+refund_requests:  PENDING → APPROVED หรือ REJECTED
+
+การเปลี่ยนสถานะทำด้วย UPDATE แบบมีเงื่อนไข (transitionStatus):
+  UPDATE bookings SET status = 'CONFIRMED' WHERE booking_id = $1 AND status IN ('PENDING_PAYMENT', ...)
+  ถ้า rowCount = 0 แปลว่ามีคนเปลี่ยนไปก่อนแล้ว → ตอบ 409 (กัน race condition)
+ทุกครั้งที่เปลี่ยนสถานะ บันทึก booking_status_history + notifications + audit_logs
+
+
+=====================================================================
+7. BUSINESS RULES (config/env.ts → BUSINESS_RULES)
+=====================================================================
+BR1  ต้อง login และบัญชี is_active, session ยังไม่ถูกเพิกถอน          auth.middleware.ts / booking.service
+BR2  สนามเดียวกันช่วงเวลาทับกันจองซ้ำไม่ได้                           findOverlap + ex_bk_no_overlap
+BR3  ต้องส่งสลิปภายใน 15 นาที ไม่งั้น EXPIRED อัตโนมัติ (HOLD_MINUTES)   expireStaleHolds (shared.repository)
+BR4  จองล่วงหน้าได้ไม่เกิน 30 วัน และต้องเป็นเวลาในอนาคต               validateSlot
+BR5  แก้ไขวัน/เวลาได้ก่อนเวลาใช้ ≥ 24 ชม.                              refund.service updateBooking
+BR6  ยอดที่ชำระต้องตรงกับยอดจอง (เทียบเป็นสตางค์ กันปัญหาทศนิยม)        payment.service amountsEqual
+BR7  แจ้งเตือนในแอป (notifications) ทุกเหตุการณ์สำคัญ                   insertNotification
+BR8  เช็คอินได้ก่อนเวลาเริ่มไม่เกิน 30 นาที และต้องชำระแล้ว             assertCheckInAllowed
+BR9  ยืมอุปกรณ์ได้เฉพาะผู้ที่มีการจองที่ชำระแล้ว ในวัน-เวลานั้น         borrowing.service
+BR10 ต้องคืนอุปกรณ์ภายในเวลาสิ้นสุดการจอง (expected_return_at)
+BR11 คืนช้า 20 บาท/15 นาที/ชิ้น · ชำรุด/หาย คิดตาม replacement_cost      returnEquipment
+BR12 คืนเงิน: ยกเลิก > 24 ชม. คืน 100% / 1–24 ชม. คืน 50% / < 1 ชม. ไม่คืน buildPreview
+BR15 โปรโมชั่นใช้ได้เฉพาะช่วงวัน/เวลา และจำนวนชั่วโมงขั้นต่ำที่กำหนด    assertPromotionUsable
+BR16 บันทึกประวัติทุกการกระทำ (audit_logs) และประวัติสถานะการจอง        insertAudit / insertStatusHistory
+อื่น ๆ: มีค่าปรับค้างชำระ → จองใหม่ไม่ได้ (hasUnpaidFines)
+        สนาม MAINTENANCE/CLOSED หรือนอกเวลาทำการ → จองไม่ได้
+
+
+=====================================================================
+8. ฟังก์ชันหลัก + SQL เบื้องหลัง (ใช้ตอบหัวข้อ "SQL เบื้องหลัง")
+=====================================================================
+--- 8.1 สร้างการจอง  POST /api/bookings  (booking.service.ts createBooking) ---
+ทั้งหมดอยู่ใน Transaction เดียว (BEGIN ... COMMIT / ROLLBACK):
+  1) ล็อกผู้ใช้     SELECT ... FROM users u JOIN member_types m ... WHERE u.user_id=$1 FOR UPDATE OF u
+                    → ตรวจ is_active (BR1)
+  2) ล็อกสนาม       SELECT ... FROM courts WHERE court_id=$1 FOR UPDATE
+                    → คนที่ 2 ที่จองสนามเดียวกันพร้อมกันต้อง "รอ" จนคนแรก COMMIT
+  3) ตรวจค่าปรับค้าง SELECT COUNT(*) FROM fines f JOIN bookings b ... WHERE b.user_id=$1 AND f.status='UNPAID'
+  4) validateSlot   เวลาในอนาคต, ≤ 30 วัน, ในเวลาทำการ, สถานะสนาม
+                    expireStaleHolds (ปล่อยการจองค้างชำระที่หมดเวลาก่อน)
+                    ตรวจทับ:
+                    SELECT booking_number, start_time, end_time FROM bookings
+                     WHERE court_id=$1 AND booking_date=$2::DATE
+                       AND status IN ('PENDING_PAYMENT','PAYMENT_VERIFIED','CONFIRMED','CHECKED_IN')
+                       AND start_time < $3(endTime) AND end_time > $4(startTime)
+                    (สูตร overlap มาตรฐาน: A.start < B.end AND A.end > B.start)
+  5) คำนวณราคา      (ดูข้อ 10) — ราคาคิดที่ backend เสมอ ไม่เชื่อตัวเลขจาก client
+  6) INSERT bookings ... status='PENDING_PAYMENT', hold_expires_at = NOW() + '15 minutes'
+                    RETURNING booking_id
+  7) ตัดสต็อกอุปกรณ์ (เรียง equipment_id กัน deadlock):
+                    UPDATE equipment SET available_quantity = available_quantity - $1
+                     WHERE equipment_id=$2 AND available_quantity >= $1
+                    rowCount = 0 → "อุปกรณ์ไม่เพียงพอ" → ROLLBACK ทั้งการจอง
+                    INSERT booking_equipment ...
+  8) INSERT booking_status_history, notifications, audit_logs
+ตารางที่เปลี่ยน: bookings, booking_equipment, equipment, booking_status_history, notifications, audit_logs
+booking_number รูปแบบ BK-YYYYMMDD-XXXXXX (สุ่ม hex 6 ตัวด้วย crypto)
+
+--- 8.2 ส่งสลิป  POST /api/payments (multipart field 'slip')  (payment.service submitPayment) ---
+  1) ตรวจไฟล์ก่อนแตะ DB: ขนาด ≤ 5MB, ตรวจ magic bytes จริง (JPEG FF D8 FF / PNG 89 50 4E 47 / WEBP RIFF..WEBP)
+     ไม่เชื่อแค่นามสกุลหรือ MIME ที่เบราว์เซอร์ส่งมา
+  2) expireStaleHolds ของการจองนี้ (ถ้าเลย 15 นาทีแล้ว → EXPIRED)
+  3) Transaction: lockBooking (SELECT ... FOR UPDATE), ตรวจเจ้าของ, ตรวจสถานะ, ตรวจว่าไม่มีสลิป PENDING ค้าง
+  4) อัปโหลดขึ้น Supabase Storage (bucket private) เก็บ "path" ใน payments.slip_url (ไม่ใช่ public URL)
+  5) ตรวจเบื้องต้น: สลิปซ้ำ (slip_reference), ยอดตรงกับ final_amount, ความชัดของภาพ (≥300px, ≥10KB)
+  6) ผลลัพธ์ 3 แบบ:
+     a) ซ้ำ/ยอดไม่ตรง → INSERT payments status='REJECTED' (AUTO) ลูกค้าส่งใหม่ได้
+     b) โหมดสาธิต + ภาพชัด → อนุมัติอัตโนมัติ + ออกใบเสร็จ ทันที
+     c) ปกติ → INSERT payments status='PENDING' (MANUAL) รอพนักงาน และ "หยุดนับเวลา 15 นาที"
+        (expireStaleHolds มีเงื่อนไข NOT EXISTS payment PENDING)
+  7) ถ้า Transaction ล้มหลังอัปโหลดแล้ว → ลบไฟล์ใน Storage ทิ้ง (ไม่มีไฟล์กำพร้า)
+
+--- 8.3 พนักงานอนุมัติสลิป  POST /api/staff/payments/:id/verify ---
+  Transaction: ล็อก booking ก่อน แล้วค่อยล็อก payment (ลำดับเดียวกันทั้งระบบ → กัน deadlock)
+  ตรวจ payment ยัง PENDING, ยอดตรง, เลขอ้างอิงไม่ซ้ำ แล้ว:
+    UPDATE payments SET status='VERIFIED', verified_by, verified_at ...
+    UPDATE bookings SET status='CONFIRMED' WHERE booking_id=$1 AND status IN ('PENDING_PAYMENT','PAYMENT_VERIFIED')
+    INSERT receipts (ยอด = bookings.final_amount ที่ backend คำนวณ ไม่ใช่ยอดที่ลูกค้ากรอก)
+    INSERT booking_status_history, notifications, audit_logs
+  ตารางที่เปลี่ยน: payments, bookings, receipts, booking_status_history, notifications, audit_logs
+  ถ้าพนักงาน 2 คนกดอนุมัติพร้อมกัน → คนที่ 2 เจอ payment ไม่ใช่ PENDING → 409
+     (และมี uq_pay_verified_booking + receipts.payment_id UNIQUE กันอีกชั้น)
+
+--- 8.4 ปฏิเสธสลิป  POST /api/staff/payments/:id/reject ---
+  payments → REJECTED + เหตุผล, ถ้าการจองยัง PENDING_PAYMENT → รีเซ็ต hold_expires_at ให้อีก 15 นาที
+
+--- 8.5 Background job (server.ts) ---
+  ทุก MAINTENANCE_INTERVAL_MS (60 วินาที):
+   - expireStaleHolds(): PENDING_PAYMENT ที่ hold_expires_at < NOW() และไม่มีสลิปรอตรวจ → EXPIRED
+     คืนสต็อกอุปกรณ์, บันทึก history/notification/audit (user_id = null = SYSTEM)
+     ใช้ SELECT ... FOR UPDATE SKIP LOCKED → ข้ามแถวที่มีคนกำลังทำรายการอยู่ ไม่ชนกัน
+   - completeFinishedBookings(): CONFIRMED/CHECKED_IN ที่เลยเวลาจบ → COMPLETED
+  และนอกจาก job ยังเรียก expireStaleHolds แบบ "lazy" ก่อนทำรายการที่เกี่ยวข้องด้วย
+  (เช่นก่อนตรวจทับ, ก่อนส่งสลิป) → ถึง job ยังไม่รัน ข้อมูลก็ถูกต้อง
+
+
+=====================================================================
+9. ฟังก์ชันรอง
+=====================================================================
+[ยกเลิก + คืนเงิน]  GET /bookings/:id/cancel-preview , POST /bookings/:id/cancel-refund (และ /cancel)
+  - ยกเลิกได้เมื่อสถานะ PENDING_PAYMENT / PAYMENT_VERIFIED / CONFIRMED และยังไม่ถึงเวลาเริ่ม
+  - คำนวณ % ตาม BR12 จากชั่วโมงที่เหลือก่อนเริ่ม
+  - ยกเลิกระหว่างสลิปรอตรวจ → ปฏิเสธสลิปนั้น และคืนเงินที่โอนมา 100%
+  - Transaction: bookings → CANCELLED, คืนสต็อกอุปกรณ์ที่ยังไม่ได้ยืมจริง,
+    INSERT refund_requests (ถ้ามียอดคืน), notification, audit
+  - พนักงานอนุมัติ: refund → APPROVED, booking CANCELLED → REFUNDED
+    ตรวจยอดคืนต้อง > 0 และ ≤ ยอดที่ชำระจริง (กันยอดผิดปกติ)
+
+[แก้ไขวัน/เวลา] PUT /bookings/:id  (BR5)
+  - ต้องเหลือ ≥ 24 ชม., ไม่มีสลิปรอตรวจ, ยังไม่ได้ยืมอุปกรณ์
+  - ใช้ validateSlot ตัวเดียวกับตอนจอง (excludeBookingId = ตัวเอง)
+  - ใช้ราคาอุปกรณ์เดิม (locked price); ถ้าจ่ายแล้ว ยอดใหม่ต้องเท่ายอดเดิม
+  - คืนสต็อกเดิม → ลบ booking_equipment → ตัดสต็อกใหม่
+
+[เช็คอิน] POST /bookings/:id/check-in (ลูกค้า) , POST /staff/check-in (พนักงานด้วย booking number / QR)
+  - ต้อง CONFIRMED/PAYMENT_VERIFIED, ไม่เกิน 30 นาทีก่อนเริ่ม, ยังไม่เลยเวลาจบ → CHECKED_IN
+
+[ยืม-คืนอุปกรณ์] POST /staff/equipment/borrow , /staff/equipment/return
+  - ยืม: ส่วนที่จองไว้ถูกตัดสต็อกไปแล้วตอนจอง → ตัดเพิ่มเฉพาะส่วนที่ยืมเกิน
+  - คืน: NORMAL → คืนสต็อก / DAMAGED, LOST → ลด total_quantity ถาวร (write-off)
+  - ค่าปรับ: คืนช้า = ceil(นาทีที่ช้า/15) × 20 × จำนวนชิ้น ; ชำรุด/หาย = replacement_cost × จำนวน
+  - แจ้งเตือนลูกค้า, มีค่าปรับค้าง → จองครั้งต่อไปไม่ได้
+
+[ค่าปรับ] GET /fines/my , POST /fines/:id/pay  (เปลี่ยนสถานะเป็น PAID)
+
+
+=====================================================================
+10. การคิดราคา (services/pricing.service.ts)
+=====================================================================
+  ค่าสนาม: คิดทีละนาที เลือกอัตราตามลำดับความเฉพาะเจาะจง
+    1) อัตราเฉพาะสนาม + ประเภทสมาชิก
+    2) อัตราเฉพาะสนาม (ทั่วไป)
+    3) อัตราประเภทกีฬา + ประเภทสมาชิก
+    4) อัตราประเภทกีฬา (ทั่วไป)
+    5) ไม่มีเลย → courts.hourly_rate
+    แยก WEEKDAY / WEEKEND ตามวันที่จอง → ช่วงจองที่คร่อมช่วงราคา (เช่น 16:00–18:00 ที่ 17:00 เปลี่ยนราคา) คิดถูก
+  ค่าอุปกรณ์: rental_fee × จำนวน (อุปกรณ์ต้องเป็นกีฬาเดียวกับสนาม)
+  ส่วนลดสมาชิก: % ของค่าสนาม (member_types.discount_percent)
+  ส่วนลดโปรโมชั่น: คิดจากค่าสนามหลังหักส่วนลดสมาชิก (PERCENT หรือ FIXED)
+  ส่วนลดรวมไม่เกินค่าสนาม (ไม่ลดค่าอุปกรณ์)
+  final = ค่าสนาม + ค่าอุปกรณ์ − ส่วนลด   (ตรงกับ CHECK chk_bk_final)
+  ปัดทศนิยม 2 ตำแหน่ง, เทียบเงินเป็นสตางค์ (จำนวนเต็ม)
+  POST /bookings/calculate-price ให้หน้าเว็บแสดงราคาก่อนจองได้ (แต่ตอนจองจริงคำนวณใหม่เสมอ)
+
+
+=====================================================================
+11. CONCURRENCY — ถ้า 2 คนกดจองสนามเดียวกัน เวลาเดียวกัน พร้อมกัน?
+=====================================================================
+ป้องกัน 2 ชั้น:
+  ชั้น 1 (โค้ด): SELECT ... FROM courts WHERE court_id=$1 FOR UPDATE
+    → Transaction ที่ 2 ต้องรอ Transaction แรก COMMIT ก่อน แล้วจึงตรวจ overlap
+      ตอนนั้นจะเห็นการจองของคนแรกแล้ว → ได้ 409
+  ชั้น 2 (DB): Exclusion constraint ex_bk_no_overlap
+    → ต่อให้มีโค้ดส่วนไหนลืมล็อก DB ก็ไม่ยอมให้มีการจองทับ (error 23P01 → 409)
+มีเทสต์ concurrency.test.ts: ยิง 20 คำขอจองช่วงเดียวกันพร้อมกัน → สำเร็จ 1 เท่านั้น
+  + ส่งสลิปซ้ำพร้อมกัน, อนุมัติซ้ำพร้อมกัน, job หมดเวลาชนกับการอนุมัติ
+
+เทคนิคอื่นที่ใช้:
+  - ล็อกลำดับเดียวกันเสมอ (booking → payment, equipment เรียงตาม id) → กัน deadlock
+  - UPDATE แบบมีเงื่อนไขสถานะ (optimistic check ด้วย rowCount)
+  - UPDATE equipment ... WHERE available_quantity >= n → ตัดสต็อกแบบ atomic ไม่ติดลบ
+  - FOR UPDATE SKIP LOCKED ใน background job
+  - deadlock/serialization error (40P01/40001) → ตอบ 409 "ลองใหม่อีกครั้ง"
+
+
+=====================================================================
+12. SECURITY
+=====================================================================
+Authentication:
+  - รหัสผ่าน hash ด้วย bcrypt (cost 10) ไม่เก็บ plain text
+  - Login สำเร็จ → สร้าง JWT (HS256, issuer/audience กำหนดตายตัว, อายุ JWT_EXPIRES_IN = 8h)
+    ใส่ใน httpOnly Cookie ชื่อ auth_token (JavaScript อ่านไม่ได้ → กัน XSS ขโมย token)
+    Secure ใน production, SameSite=Lax
+  - payload มี sessionId → ทุก request เช็คตาราง user_sessions ว่า session ยังอยู่ + ไม่หมดอายุ
+    + users.is_active → logout = DELETE session → token เดิมใช้ไม่ได้ทันที (เพิกถอนได้จริง)
+  - verify ระบุ algorithms: ['HS256'] → กันโจมตีแบบ alg: none
+  - JWT_SECRET ต้อง ≥ 32 ตัว และไม่ใช่ค่าตัวอย่าง ไม่งั้น server ไม่ยอม start
+  - รองรับ Authorization: Bearer ด้วย (ไว้ทดสอบด้วย Postman)
+  - ข้อความ login ผิดเป็นข้อความเดียวกันทั้ง user ไม่มี/รหัสผิด (ไม่บอกว่าผิดตรงไหน)
+
+Authorization:
+  - requireRole('STAFF','ADMIN') ระดับ route
+  - Object-level (กัน IDOR): ตรวจ booking.user_id === ผู้ใช้ ในทุก service ที่เข้าถึงข้อมูลรายการ
+    เช่น ดูการจอง/ใบเสร็จ/สลิปของคนอื่นไม่ได้ → 403
+  - รูปสลิป: ให้ดูผ่าน Signed URL อายุ 300 วินาที เฉพาะเจ้าของ/พนักงาน (EXECUTIVE ไม่เห็นรูป)
+
+ป้องกันอื่น ๆ:
+  - SQL Injection: ใช้ parameterized query ($1, $2) ทุกจุด
+  - CSRF: Cookie SameSite=Lax + ตรวจ Origin/Referer ของคำขอที่เปลี่ยนข้อมูลต้องตรง FRONTEND_URL
+    (CORS อย่างเดียวกัน CSRF ไม่ได้ เพราะคำขอยังถูกส่งถึง server)
+  - CORS: อนุญาตเฉพาะ FRONTEND_URL, credentials: true
+  - helmet(): security headers (XSS, clickjacking, MIME sniffing)
+  - Rate limit (ต่อ 15 นาที): login/register ผิด 20 ครั้ง/IP, จอง 30 ครั้ง/ผู้ใช้, ส่งสลิป 10 ครั้ง/ผู้ใช้
+  - จำกัดขนาด body 100kb, ไฟล์สลิป 5MB, ตรวจ magic bytes
+  - zod validate input ทุก endpoint (field แปลกปลอม/รูปแบบผิด → 400)
+  - ราคา/ยอดเงินคิดที่ server เท่านั้น
+  - error 5xx ไม่ส่ง SQL/stack ให้ client ส่งแค่ requestId (ดู log ฝั่ง server ด้วย X-Request-Id)
+  - RLS เปิดทุกตาราง, service_role key อยู่ฝั่ง backend เท่านั้น
+  - CI มี gitleaks scan หา secret ที่หลุดเข้า git
+
+
+=====================================================================
+13. ERROR HANDLING (middleware/error.middleware.ts)
+=====================================================================
+Response error รูปแบบเดียวกันทั้งระบบ:
+  { status:'error', success:false, statusCode, message, requestId, details? }
+แปลง error:
+  ZodError → 400 พร้อมรายการ field ที่ผิด
+  AppError (badRequest 400, unauthorized 401, forbidden 403, notFound 404, conflict 409)
+  Multer ไฟล์ใหญ่ → 413
+  PostgreSQL SQLSTATE:
+    23505 unique_violation     → 409 (มีข้อความภาษาไทยตามชื่อ constraint)
+    23P01 exclusion_violation  → 409 "ช่วงเวลานี้ถูกจองแล้ว"
+    23514 check_violation      → 400
+    23503 foreign_key          → 400/409
+    40P01/40001 deadlock       → 409
+    connection error           → 503
+  อื่น ๆ → 500 ข้อความทั่วไป
+
+
+=====================================================================
+14. API ENDPOINTS (prefix /api)
+=====================================================================
+Public:
+  GET  /health                        เช็ค server + DB
+  POST /auth/register, /auth/login    (rate limited)
+  GET  /auth/check-availability, /auth/member-types
+  GET  /sports, /courts, /courts/:id, /courts/:id/availability
+  GET  /equipment, /promotions/validate
+  POST /bookings/calculate-price      (optionalAuth — ถ้า login จะได้ส่วนลดสมาชิก)
+Customer (requireAuth):
+  POST /auth/logout   GET /auth/me
+  POST /bookings      GET /bookings/my   GET /bookings/:id   GET /bookings/:id/payments
+  POST /bookings/:id/cancel   POST /bookings/:id/check-in   PUT /bookings/:id
+  GET  /bookings/:id/cancel-preview   POST /bookings/:id/cancel-refund
+  POST /payments (slip)   GET /payments/instructions/:bookingId   GET /receipts/booking/:bookingId
+  GET  /notifications/my  PATCH /notifications/:id/read
+  GET  /refunds/my   GET /fines/my   POST /fines/:id/pay
+  GET  /customer/dashboard
+Staff/Admin:
+  GET  /staff/payments/pending   POST /staff/payments/:id/verify | /reject
+  GET  /staff/refunds/pending    POST /staff/refunds/:id/approve | /reject
+  GET  /staff/bookings/lookup    POST /staff/check-in
+  POST /staff/equipment/borrow | /return   GET /staff/equipment/borrowings
+  GET  /staff/dashboard
+Admin:
+  POST/PUT/DELETE /admin/courts(/:id)(/image)
+  GET/POST /admin/sports, /admin/equipment, /admin/promotions, /admin/pricing-rates
+  GET  /admin/member-types, /admin/audit-logs, /admin/dashboard
+Executive/Admin:
+  GET  /executive/dashboard, /reports/summary
+
+
+=====================================================================
+15. ENV / DEPLOY / TEST
+=====================================================================
+ตัวแปรสำคัญ (backend/.env.example):
+  DATABASE_URL (Supabase Transaction pooler port 6543), DATABASE_SSL
+  SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_BUCKET_NAME=slips, SLIP_SIGNED_URL_TTL=300
+  JWT_SECRET (≥32), JWT_EXPIRES_IN=8h, COOKIE_SAMESITE=lax, FRONTEND_URL, TRUST_PROXY (Vercel+Render=2)
+  PAYMENT_* (บัญชีรับเงิน/PromptPay), PAYMENT_DEMO_MODE
+  RATE_LIMIT_*, MAINTENANCE_INTERVAL_MS
+Timezone: ตั้ง process.env.TZ = 'Asia/Bangkok' และ DB SET LOCAL TIME ZONE ทุก transaction
+  (Render ใช้ UTC → ถ้าไม่ตั้ง เวลาจะคลาด 7 ชม. เช่นจองเวลาที่ผ่านไปแล้วได้)
+
+คำสั่ง:  cd backend → npm run dev (tsx watch) / npm run build / npm start / npm test
+DB setup: รัน supabase_schema.sql → supabase_seed.sql → migrations 002, 003, 004 ตามลำดับ
+
+Test (npm test): ไม่แตะฐานข้อมูลจริง — embedded-postgres เปิด PostgreSQL 17 ชั่วคราว
+  โหลด schema+seed+migrations แล้วลบทิ้ง, Storage ใช้ mock, guard.ts หยุดถ้า DATABASE_URL ไม่ใช่ local
+  auth / booking / concurrency / payment / demo / security / unit / admin
+CI: GitHub Actions → gitleaks + test backend + build frontend ทุก push
+
+
+=====================================================================
+16. บัญชีทดสอบ + ลำดับ DEMO
+=====================================================================
+รหัสผ่านทุกบัญชี: Password123!
+  customer1 (EXTERNAL 0%)   customer2 (STUDENT 10%)
+  staff1 (STAFF)   admin1 (ADMIN)   exec1 (EXECUTIVE)
+สลิปตัวอย่าง: demo_slips/slip_210_DEMO0001.png (ชัด → อนุมัติอัตโนมัติในโหมดสาธิต)
+              demo_slips/*_unclear.png (ไม่ชัด → เข้าคิวพนักงาน)
+
+ลำดับตามเกณฑ์อาจารย์:
+  1) ก่อนทำ: แสดงตารางว่างของสนาม / สต็อกอุปกรณ์
+  2) ทำ: customer จอง (เลือกอุปกรณ์ด้วย) → ส่งสลิป → staff อนุมัติ → ได้ใบเสร็จ
+  3) หลังทำ: เปิด DB ให้ดู bookings, booking_equipment, equipment (available ลด),
+     payments, receipts, booking_status_history, notifications, audit_logs
+     เช่น SELECT * FROM bookings ORDER BY booking_id DESC LIMIT 1;
+  4) กรณีปฏิเสธ: จองสนามเดิมช่วงเวลาทับ → 409 "สนามนี้ถูกจองแล้ว"
+     (หรือ: ยอดสลิปไม่ตรง, เช็คอินก่อนเวลา, ยืมอุปกรณ์เกินสต็อก)
+  5) ผลปลายทาง: หน้าใบเสร็จ / การจองของฉัน / dashboard
+ก่อนนำเสนอ: เปิด https://<render>/api/health ทิ้งไว้ (free tier sleep, request แรกช้า 30-50 วิ)
+
+
+=====================================================================
+17. คำถามที่น่าจะโดนถาม + คำตอบ
+=====================================================================
+Q: ถ้า 2 คนจองสนามเดียวกันพร้อมกันจะเกิดอะไร?
+A: ล็อกแถวสนามด้วย SELECT ... FOR UPDATE ใน transaction คนที่ 2 ต้องรอ แล้วจะเจอว่าทับ → 409
+   และมี exclusion constraint ระดับ DB กันอีกชั้น ทดสอบยิงพร้อมกัน 20 คำขอ สำเร็จแค่ 1
+
+Q: ทำไมใช้ Transaction? ถ้าพังกลางทางล่ะ?
+A: การจองแตะหลายตาราง (bookings, booking_equipment, equipment, history, notification, audit)
+   ต้องสำเร็จพร้อมกันหรือไม่สำเร็จเลย (Atomicity) — ถ้าอุปกรณ์ไม่พอ ROLLBACK การจองทั้งหมด
+
+Q: ตรวจทับเวลายังไง?
+A: start_time < endTime ใหม่ AND end_time > startTime ใหม่ เฉพาะสถานะที่ยังถือสนาม
+   ช่วงเป็น [เริ่ม, จบ) จึงจองต่อกันพอดีได้ (10–11 กับ 11–12)
+
+Q: ทำไมเก็บ start_time เป็น VARCHAR 'HH:MM' ไม่ใช่ TIME?
+A: ช่องเวลาเป็นเวลาท้องถิ่นแบบนาฬิกา ไม่ผูก timezone และต้องรองรับ '24:00' (ปิดเที่ยงคืน)
+   ซึ่ง TIME เทียบ/แสดงยุ่งกว่า รูปแบบถูกบังคับด้วย regex ใน validator + CHECK end>start
+   'HH:MM' เทียบแบบข้อความได้ตรงลำดับเวลา และตอนต้องการ range ก็แปลงด้วย booking_period()
+
+Q: ทำไมไม่ใช้ ORM?
+A: ต้องการคุม SQL เอง (FOR UPDATE, SKIP LOCKED, partial index, exclusion constraint)
+   และเป็นวิชาฐานข้อมูล ทุก query อ่านได้ตรง ๆ ใน repositories/
+
+Q: 15 นาทียกเลิกอัตโนมัติทำยังไง?
+A: hold_expires_at = NOW() + 15 นาที, background job ทุก 60 วิ + ตรวจแบบ lazy ก่อนทำรายการ
+   เปลี่ยนเป็น EXPIRED คืนสนาม/อุปกรณ์ และถ้าส่งสลิปแล้ว (PENDING) จะหยุดนับ ไม่ยกเลิก
+
+Q: กันลูกค้าแก้ราคาเองจาก frontend ยังไง?
+A: backend คำนวณราคาใหม่ทุกครั้งจากฐานข้อมูล ไม่รับยอดจาก client และตอนชำระเทียบยอดสลิปกับ
+   bookings.final_amount ใบเสร็จก็ใช้ยอดจาก DB
+
+Q: กันสลิปซ้ำยังไง?
+A: unique index uq_pay_slip_ref บน UPPER(slip_reference) (ยกเว้น REJECTED) + ตรวจในโค้ดก่อน
+   และ 1 การจองมีสลิปรอตรวจได้ 1 ใบ / อนุมัติได้ 1 ใบ (partial unique index)
+
+Q: เก็บรหัสผ่าน/ token ยังไง?
+A: bcrypt hash, JWT ใน httpOnly cookie (JS อ่านไม่ได้), เก็บ session ใน DB เพื่อเพิกถอนได้ตอน logout
+   เก็บ sha256 ของ token ไม่เก็บ token จริง
+
+Q: กัน SQL Injection?
+A: parameterized query ทุกจุด ($1,$2) ค่าจากผู้ใช้ไม่ถูกต่อ string ลง SQL
+
+Q: Audit log ทำยังไง ทำไมไม่ใช้ trigger?
+A: backend INSERT audit_logs ใน transaction เดียวกับการกระทำ (ถ้า rollback log ก็หายด้วย สอดคล้องกัน)
+   เก็บ old/new เป็น JSONB รู้ว่าใคร (user_id) ทำอะไร จาก IP ไหน
+   ตอนย้ายจาก Oracle เลือกทำที่ backend เพราะได้ข้อมูล user/IP ของ request ด้วย
+
+Q: ทำไมแยก booking_equipment กับ equipment_borrowings?
+A: booking_equipment = จองไว้ล่วงหน้า (จ่ายเงินแล้ว ตัดสต็อกไว้)
+   equipment_borrowings = ยืมจริงหน้างาน มีเวลาคืน สภาพตอนคืน และค่าปรับผูกกับรายการนี้
+   ยืมได้มากกว่าที่จอง (ตัดสต็อกเพิ่มเฉพาะส่วนเกิน)
+
+Q: available_quantity ซ้ำซ้อนไหม (คำนวณได้)?
+A: ตั้งใจเก็บเป็นตัวนับเพื่อตัดสต็อกแบบ atomic (UPDATE ... WHERE available >= n)
+   และมี CHECK 0 ≤ available ≤ total กันติดลบ
+
+Q: ระบบรู้ได้ไงว่าเงินเข้าจริง?
+A: ยังไม่มี API ธนาคาร ระบบตรวจเบื้องต้น (ไฟล์, ยอด, ความชัด, สลิปซ้ำ) แล้วให้พนักงานยืนยันยอดเข้าบัญชี
+   โหมดสาธิตอนุมัติอัตโนมัติเพื่อการนำเสนอเท่านั้น (production ต้องปิด PAYMENT_DEMO_MODE)
+
+Q: Timezone?
+A: ทุกอย่างเป็นเวลาไทย ตั้ง TZ ที่ Node และ SET LOCAL TIME ZONE ทุก transaction
+   คอลัมน์ timestamp ใช้ TIMESTAMPTZ (เก็บเป็นเวลาสากล)
+
+Q: Index ที่สร้างช่วยอะไร?
+A: idx_bk_court_date ใช้ตรวจทับ/ดูตารางว่างของสนามในวันนั้น,
+   idx_bk_status_hold ใช้ job หาการจองค้างชำระ, partial unique index ใช้บังคับกฎธุรกิจ
+
+Q: RLS คืออะไร ทำไมเปิด?
+A: Supabase เปิด REST API ให้ทุกตารางอัตโนมัติ ถ้าไม่เปิด RLS คนที่มี anon key อ่านตารางได้ตรง ๆ
+   เปิด RLS แบบไม่มี policy = ปิดช่องนั้นทั้งหมด ทุกคำขอต้องผ่าน backend API
+
+
+=====================================================================
+18. ข้อจำกัด (ตอบในหัวข้อ "สรุป: ปัญหาที่เจอ / ข้อจำกัด")
+=====================================================================
+- ยังไม่เชื่อม API ธนาคาร/PromptPay จริง → ต้องให้พนักงานยืนยันยอดเงินเข้า
+- การชำระค่าปรับ (POST /fines/:id/pay) เปลี่ยนสถานะเป็น PAID ทันที ยังไม่มีหลักฐานการโอน
+- day_type HOLIDAY มีใน schema แต่การคิดราคาตอนนี้แยกแค่ WEEKDAY/WEEKEND
+- Background job อยู่ใน process เดียวกับ API (setInterval) — ถ้า scale หลาย instance ต้องย้ายไป
+  cron/queue (แต่ใช้ SKIP LOCKED + UPDATE มีเงื่อนไข จึงไม่ทำงานซ้ำซ้อนผิดพลาด)
+- Render free tier sleep หลังไม่มีคนใช้ 15 นาที → request แรกช้า
+- Vercel preview URL ใช้ทำรายการไม่ได้ (โดน CSRF check ตั้งใจ) ต้องใช้โดเมนหลัก
+
+ปัญหาที่เจอระหว่างทำ (เล่าได้):
+- ย้าย Oracle → PostgreSQL: trigger, function-based index, RETURNING INTO ต้องเขียนใหม่
+- Timezone คลาด 7 ชม. บน Render (UTC) → แก้ด้วย TZ + SET LOCAL TIME ZONE
+- Supabase Transaction pooler ไม่จำค่า SET ระดับ session → ต้อง SET LOCAL ทุก transaction
+- จองซ้อนเมื่อกดพร้อมกัน → เพิ่ม FOR UPDATE + exclusion constraint
+- Cookie ข้ามโดเมนโดนบล็อก (Safari) → ใช้ Vercel rewrite ให้เป็นโดเมนเดียวกัน
+=====================================================================

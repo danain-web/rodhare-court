@@ -1,0 +1,237 @@
+import React, { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '../context/AuthContext';
+import { checkAvailabilityApi, getMemberTypesPublicApi, registerApi } from '../services/auth';
+import { BrandMark } from '../components/Navbar';
+import { Alert } from '../components/ui';
+import { CheckCircle2, GraduationCap, Loader2, UserPlus, Users, Briefcase, XCircle } from 'lucide-react';
+
+type Check = { state: 'idle' | 'checking' | 'ok' | 'taken' | 'invalid'; msg?: string };
+
+const USERNAME_RE = /^[A-Za-z0-9_.-]{3,50}$/;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// ตรวจชื่อผู้ใช้/อีเมลซ้ำกับฐานข้อมูลหลังหยุดพิมพ์ 400ms (ไม่สนตัวพิมพ์เล็ก/ใหญ่)
+const useAvailability = (field: 'username' | 'email', value: string, valid: (v: string) => boolean, invalidMsg: string): Check => {
+  const [check, setCheck] = useState<Check>({ state: 'idle' });
+  useEffect(() => {
+    const v = value.trim();
+    if (!v) return setCheck({ state: 'idle' });
+    if (!valid(v)) return setCheck({ state: 'invalid', msg: invalidMsg });
+    setCheck({ state: 'checking' });
+    const t = setTimeout(async () => {
+      try {
+        const res = await checkAvailabilityApi({ [field]: v });
+        const available = field === 'username' ? res.usernameAvailable : res.emailAvailable;
+        setCheck(
+          available
+            ? { state: 'ok', msg: field === 'username' ? 'ชื่อผู้ใช้นี้ใช้ได้' : 'อีเมลนี้ใช้ได้' }
+            : { state: 'taken', msg: field === 'username' ? 'ชื่อผู้ใช้นี้ถูกใช้งานแล้ว' : 'อีเมลนี้ถูกใช้งานแล้ว' }
+        );
+      } catch {
+        setCheck({ state: 'idle' });
+      }
+    }, 400);
+    return () => clearTimeout(t);
+  }, [value]);
+  return check;
+};
+
+const Hint: React.FC<{ check: Check }> = ({ check }) => {
+  if (check.state === 'idle') return null;
+  if (check.state === 'checking')
+    return (
+      <div className="mt-1 flex items-center gap-1 text-[11px] text-slate-500">
+        <Loader2 className="h-3 w-3 animate-spin" /> กำลังตรวจสอบ...
+      </div>
+    );
+  const good = check.state === 'ok';
+  return (
+    <div className={`mt-1 flex items-center gap-1 text-[11px] ${good ? 'text-mint-700' : 'text-rose-600'}`}>
+      {good ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />} {check.msg}
+    </div>
+  );
+};
+
+const MEMBER_ICON: Record<string, React.ReactNode> = {
+  EXTERNAL: <Users className="h-5 w-5" />,
+  STUDENT: <GraduationCap className="h-5 w-5" />,
+  PERSONNEL: <Briefcase className="h-5 w-5" />,
+};
+
+// หน้าสมัครสมาชิก (Customer Registration)
+export const RegisterPage: React.FC = () => {
+  const { login } = useAuth();
+  const navigate = useNavigate();
+
+  const [form, setForm] = useState({
+    username: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    firstName: '',
+    lastName: '',
+    phone: '',
+  });
+  const [memberTypeId, setMemberTypeId] = useState<number | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const { data: memberTypes = [] } = useQuery({ queryKey: ['memberTypesPublic'], queryFn: getMemberTypesPublicApi });
+  useEffect(() => {
+    if (memberTypeId === null && memberTypes.length) {
+      setMemberTypeId((memberTypes.find((m) => m.typeName === 'EXTERNAL') || memberTypes[0]).memberTypeId);
+    }
+  }, [memberTypes]);
+
+  const usernameCheck = useAvailability('username', form.username, (v) => USERNAME_RE.test(v), 'ใช้ได้เฉพาะ a-z, 0-9, _ . - (3-50 ตัวอักษร)');
+  const emailCheck = useAvailability('email', form.email, (v) => EMAIL_RE.test(v), 'รูปแบบอีเมลไม่ถูกต้อง');
+
+  const passwordTooShort = form.password.length > 0 && form.password.length < 6;
+  const passwordMismatch = form.confirmPassword.length > 0 && form.password !== form.confirmPassword;
+
+  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMessage(null);
+    if (usernameCheck.state === 'taken' || emailCheck.state === 'taken') {
+      setErrorMessage('ชื่อผู้ใช้หรืออีเมลถูกใช้งานแล้ว กรุณาเปลี่ยนใหม่');
+      return;
+    }
+    if (form.password.length < 6) {
+      setErrorMessage('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร');
+      return;
+    }
+    if (form.password !== form.confirmPassword) {
+      setErrorMessage('ยืนยันรหัสผ่านไม่ตรงกัน');
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const data = await registerApi({
+        username: form.username.trim(),
+        email: form.email.trim(),
+        password: form.password,
+        firstName: form.firstName.trim(),
+        lastName: form.lastName.trim(),
+        phone: form.phone.trim() || undefined,
+        memberTypeId: memberTypeId ?? undefined,
+      });
+      // สมัครสำเร็จ -> เข้าสู่ระบบให้อัตโนมัติ แล้วไปหน้าค้นหาสนาม
+      login(data.user);
+
+      navigate('/courts');
+    } catch (err: any) {
+      const details = err.response?.data?.details;
+      setErrorMessage(
+        Array.isArray(details) && details.length
+          ? details.map((d: any) => d.message).join(', ')
+          : err.response?.data?.message || err.message || 'สมัครสมาชิกไม่สำเร็จ'
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const blocked = isSubmitting || usernameCheck.state === 'taken' || emailCheck.state === 'taken' || passwordMismatch || passwordTooShort;
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-canvas p-6">
+      <div className="w-full max-w-2xl space-y-6">
+        <BrandMark />
+        <div>
+          <span className="badge-mint">Member Registration</span>
+          <h2 className="mt-2 text-3xl font-bold text-forest-950">สมัครสมาชิก</h2>
+          <p className="text-sm text-slate-500">สมัครฟรี เพื่อจองสนามและยืมอุปกรณ์กีฬาออนไลน์</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="card space-y-5 p-6">
+          {errorMessage && <Alert tone="error" title={errorMessage} onClose={() => setErrorMessage(null)} />}
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="label">ชื่อผู้ใช้ (Username) *</label>
+              <input required className="input" value={form.username} onChange={set('username')} placeholder="เช่น somchai_k" autoComplete="username" />
+              <Hint check={usernameCheck} />
+            </div>
+            <div>
+              <label className="label">อีเมล *</label>
+              <input required type="email" className="input" value={form.email} onChange={set('email')} placeholder="name@example.com" autoComplete="email" />
+              <Hint check={emailCheck} />
+            </div>
+            <div>
+              <label className="label">ชื่อ *</label>
+              <input required className="input" value={form.firstName} onChange={set('firstName')} autoComplete="given-name" />
+            </div>
+            <div>
+              <label className="label">นามสกุล *</label>
+              <input required className="input" value={form.lastName} onChange={set('lastName')} autoComplete="family-name" />
+            </div>
+            <div>
+              <label className="label">รหัสผ่าน * (อย่างน้อย 6 ตัวอักษร)</label>
+              <input required type="password" className="input" value={form.password} onChange={set('password')} autoComplete="new-password" />
+              {passwordTooShort && <div className="mt-1 text-[11px] text-rose-600">รหัสผ่านสั้นเกินไป</div>}
+            </div>
+            <div>
+              <label className="label">ยืนยันรหัสผ่าน *</label>
+              <input required type="password" className="input" value={form.confirmPassword} onChange={set('confirmPassword')} autoComplete="new-password" />
+              {passwordMismatch && <div className="mt-1 text-[11px] text-rose-600">รหัสผ่านไม่ตรงกัน</div>}
+            </div>
+            <div>
+              <label className="label">เบอร์โทรศัพท์</label>
+              <input className="input" value={form.phone} onChange={set('phone')} placeholder="08xxxxxxxx" maxLength={20} autoComplete="tel" />
+            </div>
+          </div>
+
+          <div>
+            <label className="label">ประเภทสมาชิก (ใช้คำนวณส่วนลดค่าบริการ)</label>
+            <div className="grid gap-3 sm:grid-cols-3">
+              {memberTypes.map((m) => {
+                const active = memberTypeId === m.memberTypeId;
+                return (
+                  <button
+                    type="button"
+                    key={m.memberTypeId}
+                    onClick={() => setMemberTypeId(m.memberTypeId)}
+                    className={`flex items-center gap-3 rounded-xl p-3 text-left transition ${
+                      active ? 'bg-forest-900 text-white ring-2 ring-mint-300' : 'bg-panel text-forest-950 hover:ring-2 hover:ring-mint-200'
+                    }`}
+                  >
+                    <span className={active ? 'text-mint-300' : 'text-forest-700'}>{MEMBER_ICON[m.typeName] || <Users className="h-5 w-5" />}</span>
+                    <span>
+                      <span className="block text-sm font-semibold">{m.displayName}</span>
+                      <span className={`block text-[11px] ${active ? 'text-mint-200' : 'text-slate-500'}`}>
+                        {m.discountPercent > 0 ? `ส่วนลด ${m.discountPercent}%` : 'ราคาปกติ'}
+                      </span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-2 text-[11px] text-slate-500">นักศึกษา/บุคลากร อาจถูกขอตรวจบัตรที่เคาน์เตอร์ตอนเช็คอิน</p>
+          </div>
+
+          <button type="submit" disabled={blocked} className="btn-primary w-full py-3">
+            {isSubmitting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" /> กำลังสมัครสมาชิก...
+              </>
+            ) : (
+              <>
+                <UserPlus className="h-4 w-4" /> สมัครสมาชิก
+              </>
+            )}
+          </button>
+          <div className="text-center text-xs text-slate-500">
+            มีบัญชีอยู่แล้ว?{' '}
+            <Link to="/login" className="font-semibold text-forest-700 hover:underline">
+              เข้าสู่ระบบ
+            </Link>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};

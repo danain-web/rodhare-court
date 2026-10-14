@@ -1,0 +1,58 @@
+# =====================================================================
+# CI — รันทุกครั้งที่ push / เปิด Pull Request
+#   1) Secret scanning (gitleaks) — กัน .env / key หลุดขึ้น Git
+#   2) Backend: type check + เทสต์ทั้งหมดบน PostgreSQL ชั่วคราว (ไม่แตะ Supabase จริง)
+#   3) Frontend: type check + production build
+# =====================================================================
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npm test
+      - run: npm audit --omit=dev --audit-level=high
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - run: npm audit --omit=dev --audit-level=high

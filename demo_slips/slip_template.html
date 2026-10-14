@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Demo Slip</title>
+<style>
+  html, body { margin: 0; padding: 0; }
+  body {
+    width: 540px; height: 960px; overflow: hidden;
+    font-family: "Leelawadee UI", "Tahoma", sans-serif;
+    background: linear-gradient(180deg, #0f3d2e 0%, #145a43 38%, #eef4f1 38%);
+    color: #10231c; position: relative;
+  }
+  .top { color: #fff; text-align: center; padding-top: 46px; }
+  .app { font-size: 18px; letter-spacing: 1px; opacity: .85; }
+  .check { width: 84px; height: 84px; border-radius: 50%; background: #3ddc97; margin: 22px auto 14px;
+           display: flex; align-items: center; justify-content: center; font-size: 52px; color: #0f3d2e; font-weight: 700; }
+  .ok { font-size: 30px; font-weight: 700; }
+  .when { font-size: 17px; opacity: .85; margin-top: 6px; }
+  .card { background: #fff; margin: 34px 30px 0; border-radius: 22px; padding: 26px 28px;
+          box-shadow: 0 8px 24px rgba(0,0,0,.12); }
+  .party { display: flex; align-items: center; gap: 16px; padding: 12px 0; }
+  .avatar { width: 54px; height: 54px; border-radius: 50%; background: #dfeee7; display: flex; align-items: center;
+            justify-content: center; font-weight: 700; font-size: 22px; color: #145a43; flex-shrink: 0; }
+  .lbl { font-size: 14px; color: #6b7d75; }
+  .name { font-size: 19px; font-weight: 700; }
+  .acct { font-size: 16px; color: #33463e; letter-spacing: 1px; }
+  .arrow { text-align: center; color: #9bb3a8; font-size: 22px; line-height: 1; }
+  hr { border: none; border-top: 1px dashed #cfdcd6; margin: 16px 0; }
+  .row { display: flex; justify-content: space-between; align-items: baseline; margin: 10px 0; }
+  .amount { font-size: 40px; font-weight: 800; color: #0f3d2e; }
+  .ref { font-family: Consolas, monospace; font-size: 20px; font-weight: 700; letter-spacing: 1px; }
+  .memo { font-size: 16px; }
+  .wm { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+  .wm span { transform: rotate(-32deg); font-size: 64px; font-weight: 900; color: rgba(220, 38, 38, .16);
+             border: 6px solid rgba(220, 38, 38, .16); padding: 6px 26px; border-radius: 14px; white-space: nowrap; }
+  .foot { position: absolute; bottom: 26px; left: 0; right: 0; text-align: center; font-size: 15px; color: #b91c1c; font-weight: 700; }
+</style>
+</head>
+<body>
+  <div class="top">
+    <div class="app">DEMO MOBILE BANKING</div>
+    <div class="check">✓</div>
+    <div class="ok">โอนเงินสำเร็จ</div>
+    <div class="when">{{WHEN}}</div>
+  </div>
+
+  <div class="card">
+    <div class="party">
+      <div class="avatar">ส</div>
+      <div>
+        <div class="lbl">จาก</div>
+        <div class="name">นาย สมชาย C.</div>
+        <div class="acct">xxx-x-x1234-x</div>
+      </div>
+    </div>
+    <div class="arrow">↓</div>
+    <div class="party">
+      <div class="avatar">B</div>
+      <div>
+        <div class="lbl">ไปยัง</div>
+        <div class="name">บจก. บาร์บี้ สปอร์ตส อารีน่า</div>
+        <div class="acct">xxx-x-x8338-x</div>
+      </div>
+    </div>
+    <hr>
+    <div class="row"><span class="lbl">จำนวนเงิน</span><span class="amount">{{AMOUNT}} <span style="font-size:20px">บาท</span></span></div>
+    <div class="row"><span class="lbl">ค่าธรรมเนียม</span><span class="memo">0.00 บาท</span></div>
+    <div class="row"><span class="lbl">เลขที่รายการ</span><span class="ref">{{REF}}</span></div>
+    <div class="row"><span class="lbl">บันทึกช่วยจำ</span><span class="memo">ค่าจองสนามกีฬา</span></div>
+  </div>
+
+  <div class="wm"><span>DEMO • ทดสอบระบบ</span></div>
+  <div class="foot">สลิปตัวอย่างสำหรับทดสอบระบบ Barbie Sports Arena เท่านั้น</div>
+</body>
+</html>

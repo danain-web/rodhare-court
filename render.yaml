@@ -1,0 +1,52 @@
+# =====================================================================
+# Render Blueprint — Backend API (Node.js + Express)
+# ใช้ผ่าน Render Dashboard → New → Blueprint → เลือก GitHub repo นี้
+# ค่า sync: false = ต้องกรอกเองใน Dashboard (ห้ามใส่ secret ลงไฟล์นี้)
+# =====================================================================
+services:
+  - type: web
+    name: rodhare-court-api
+    runtime: node
+    plan: free
+    region: singapore
+    rootDir: backend
+    # --include=dev: ต้องมี typescript (devDependency) ตอน build แม้ NODE_ENV=production
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "24"
+      - key: TRUST_PROXY
+        value: "2"
+      - key: JWT_EXPIRES_IN
+        value: 8h
+      - key: SUPABASE_BUCKET_NAME
+        value: slips
+      - key: SLIP_SIGNED_URL_TTL
+        value: "300"
+      - key: COOKIE_SAMESITE
+        value: lax
+      - key: MAINTENANCE_INTERVAL_MS
+        value: "60000"
+      # บัญชีรับเงินจริง (ไม่ตั้ง = หน้าชำระเงินแจ้งให้ติดต่อเจ้าหน้าที่)
+      - key: PAYMENT_ACCOUNT_NAME
+        sync: false
+      - key: PAYMENT_PROMPTPAY_ID
+        sync: false
+      - key: PAYMENT_BANK_NAME
+        sync: false
+      - key: PAYMENT_BANK_ACCOUNT_NO
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: FRONTEND_URL
+        sync: false

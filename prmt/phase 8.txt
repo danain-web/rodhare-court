@@ -1,0 +1,129 @@
+
+# PHASE 8
+## Check-in + Notification + Audit Log
+
+---
+
+# 1. CHECK-IN
+
+Staff:
+
+/staff/check-in
+
+รับ:
+
+Booking ID หรือ QR Code
+
+---
+
+# 2. BR11
+
+สามารถ Check-in ได้:
+
+ก่อน Start Time ไม่เกิน 30 นาที
+
+ตัวอย่าง:
+
+Booking Start = 18:00
+
+Check-in ได้ตั้งแต่:
+
+17:30
+
+ถ้า 17:00:
+
+Reject
+
+---
+
+# 3. CHECK-IN VALIDATION
+
+ตรวจ:
+
+- Booking Exists
+- Booking belongs to customer
+- Payment Verified
+- Booking Confirmed
+- Date
+- Time
+- Not Cancelled
+- Not already Checked In
+
+จากนั้น:
+
+BOOKING → CHECKED_IN
+
+---
+
+# 4. NOTIFICATION
+
+ต้องสร้าง Notification เมื่อ:
+
+Booking สำเร็จ
+Payment Verified
+Booking Cancelled
+Refund Approved
+Booking Updated
+
+Channel:
+
+IN_APP
+
+สามารถออกแบบ Email/SMS เป็น Extension ได้
+
+---
+
+# 5. AUDIT LOG
+
+บันทึก:
+
+INSERT
+UPDATE
+DELETE
+
+ข้อมูล:
+
+action
+table_name
+record_id
+old_data
+new_data
+created_at
+created_by
+
+---
+
+# 6. ADMIN AUDIT PAGE
+
+สร้าง:
+
+/admin/audit-logs
+
+Filter:
+
+User
+Action
+Table
+Date
+
+แสดง:
+
+Action
+Table
+Record
+User
+Time
+
+---
+
+# 7. TEST
+
+ทดสอบ:
+
+1. Check-in สำเร็จ
+2. เร็วเกิน 30 นาที
+3. Payment ยังไม่ Verified
+4. Booking Cancelled
+5. Check-in ซ้ำ
+6. Notification
+7. Audit Log
