@@ -28,7 +28,10 @@
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.4.0",
     "pg": "^8.23.1",
+<<<<<<< HEAD
     "tesseract.js": "^5.1.1",
+=======
+>>>>>>> 7911668a7e5d511f83e82c3f30e2b56c2428aac6
     "zod": "^4.6.5"
   },
   "devDependencies": {

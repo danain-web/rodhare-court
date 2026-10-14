@@ -2,6 +2,12 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
     { "source": "/api/:path*", "destination": "https://rodhare-court-backend.onrender.com/api/:path*" },
+<<<<<<< HEAD
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
+=======
+    { "source": "/((?!assets/).*)", "destination": "/index.html" }
+  ]
+}
+>>>>>>> 7911668a7e5d511f83e82c3f30e2b56c2428aac6

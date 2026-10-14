@@ -5,6 +5,7 @@
 //   - signed URL ถูกสร้างให้เฉพาะ path ที่ระบบรู้จัก
 // ฟังก์ชันตรวจไฟล์ (validateSlipBuffer, toStoragePath) ใช้ของจริง
 // =====================================================================
+<<<<<<< HEAD
 // OCR จริงช้าและโหลดโมเดลภาษาจากเน็ต → ใช้ test double: อ่าน "ข้อความในรูป" จากท้ายไฟล์ทดสอบ
 //   ท้ายไฟล์มี "OCR:<ข้อความ>" → ใช้ parseSlipText จริงกับข้อความนั้น · ไม่มี marker → เป็นสลิปแต่อ่านยอดไม่ได้
 // ใช้ helper slipImage(buf, text) ใน helpers.ts สร้างไฟล์ทดสอบ
@@ -20,6 +21,8 @@ jest.mock('../../src/utils/slipOcr', () => {
   };
 });
 
+=======
+>>>>>>> 7911668a7e5d511f83e82c3f30e2b56c2428aac6
 jest.mock('../../src/utils/slipStorage', () => {
   const actual = jest.requireActual('../../src/utils/slipStorage');
   const files = new Map<string, { size: number; mimeType: string }>();

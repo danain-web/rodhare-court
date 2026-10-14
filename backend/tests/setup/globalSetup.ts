@@ -67,6 +67,11 @@ export default async function globalSetup(): Promise<void> {
     // บัญชีรับเงินสำหรับเทสต์ (ค่าทดสอบ ไม่ใช่บัญชีจริง)
     PAYMENT_ACCOUNT_NAME: 'Rodhare Court (test)',
     PAYMENT_PROMPTPAY_ID: '0812345678',
+<<<<<<< HEAD
+=======
+    // เทสต์ส่วนใหญ่ตรวจขั้นตอนเจ้าหน้าที่อนุมัติ → ปิดโหมดสาธิต (demo.test.ts เปิดเองเพื่อทดสอบโหมดนี้)
+    PAYMENT_DEMO_MODE: 'false',
+>>>>>>> 7911668a7e5d511f83e82c3f30e2b56c2428aac6
   });
 
   (globalThis as any).__RODHARE_TEST_PG__ = pg;

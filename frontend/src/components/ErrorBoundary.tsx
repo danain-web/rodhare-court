@@ -19,6 +19,19 @@ export class ErrorBoundary extends React.Component<{ children: React.ReactNode }
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
     console.error('UI error:', error, info.componentStack);
+<<<<<<< HEAD
+=======
+
+    // หลัง deploy ใหม่ ไฟล์ chunk เก่า (ชื่อ hash เดิม) หายไป → โหลดหน้าใหม่ 1 ครั้งเพื่อดึงเวอร์ชันล่าสุด
+    if (/dynamically imported module|Importing a module script failed|Loading chunk/i.test(error.message)) {
+      try {
+        if (sessionStorage.getItem('chunk-reloaded') !== '1') {
+          sessionStorage.setItem('chunk-reloaded', '1');
+          window.location.reload();
+        }
+      } catch { /* sessionStorage ใช้ไม่ได้ → แสดงหน้า error ตามปกติ */ }
+    }
+>>>>>>> 7911668a7e5d511f83e82c3f30e2b56c2428aac6
   }
 
   render() {

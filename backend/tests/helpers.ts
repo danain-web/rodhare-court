@@ -79,9 +79,12 @@ export const CLEAR_SLIP_PNG = (() => {
   return buf;
 })();
 
+<<<<<<< HEAD
 // ต่อข้อความที่ OCR (mock) จะ "อ่านเจอ" ท้ายไฟล์ — ใช้ข้อความสลิปโอนเงินจำลองที่มียอด
 export const slipText = (amount: number, ref = uniqueSlipRef('REF')) =>
   `โอนเงินสำเร็จ จำนวนเงิน ${amount.toFixed(2)} บาท ค่าธรรมเนียม 0.00 บาท เลขที่รายการ ${ref} ธนาคาร`;
 export const slipImage = (base: Buffer, text: string) => Buffer.concat([base, Buffer.from(`OCR:${text}`, 'utf8')]);
 
+=======
+>>>>>>> 7911668a7e5d511f83e82c3f30e2b56c2428aac6
 export { app, pool };

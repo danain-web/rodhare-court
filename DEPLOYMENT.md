@@ -32,7 +32,11 @@ third-party cookie จะไม่ทิ้ง `auth_token` ทำให้ Logi
 | `FRONTEND_URL` | `https://rodhare-court.vercel.app` | **ต้องตรงกับโดเมนหน้าเว็บทุกตัวอักษร** (ใช้ตรวจ CSRF) · คั่นหลายค่าด้วย `,` |
 | `TRUST_PROXY` | `2` | Vercel + Render = 2 hop → Rate limit เห็น IP จริง |
 | `MAINTENANCE_INTERVAL_MS` | `60000` | งานยกเลิกการจองค้างชำระ |
+<<<<<<< HEAD
 | `PAYMENT_DEMO_MODE` | ไม่ตั้ง / `true` / `false` | โหมดสาธิต: QR จำลอง + อนุมัติสลิป demo อัตโนมัติ · ไม่ตั้ง = เปิดเองเมื่อยังไม่มีบัญชีจริง |
+=======
+| `PAYMENT_DEMO_MODE` | ไม่ตั้ง / `true` / `false` | โหมดสาธิต: อนุมัติสลิปที่ยอดตรงอัตโนมัติ · **ไม่ตั้ง = เปิด** · ระบบรับเงินจริงตั้ง `false` |
+>>>>>>> 7911668a7e5d511f83e82c3f30e2b56c2428aac6
 | `PAYMENT_ACCOUNT_NAME` | ชื่อบัญชีจริง | ใช้คู่กับ `PAYMENT_PROMPTPAY_ID` / เลขบัญชี |
 | `PAYMENT_PROMPTPAY_ID` | เบอร์/เลขผู้เสียภาษีพร้อมเพย์จริง | ใช้สร้าง PromptPay QR พร้อมยอด |
 | `PAYMENT_BANK_NAME` / `PAYMENT_BANK_ACCOUNT_NO` | ธนาคาร / เลขบัญชีจริง | ไม่บังคับ |
@@ -100,7 +104,10 @@ git push -u origin main
 - [ ] Cookie `auth_token` เป็น `SameSite=Lax`
 - [ ] หน้าชำระเงินแสดง QR (โหมดสาธิต = QR จำลองมีป้าย "สาธิต") และไม่มีช่องกรอกเลขอ้างอิง
 - [ ] แนบสลิป `demo_slips/slip_210_DEMO0001.png` → ชำระเงินเรียบร้อยทันที + ใบเสร็จ
+<<<<<<< HEAD
 - [ ] แนบสลิป `_unclear` → "รอเจ้าหน้าที่ตรวจสอบ" → พนักงานเห็นรูปและอนุมัติได้
+=======
+>>>>>>> 7911668a7e5d511f83e82c3f30e2b56c2428aac6
 - [ ] เปิด URL รูปสลิปเดิมแบบ public (ถ้ามี) ต้องเปิดไม่ได้หลังปิด Public bucket
 - [ ] กระดิ่งแจ้งเตือนแสดงรายการหลังสลิปถูกตรวจ
 - [ ] เปิด URL ย่อยตรงๆ เช่น `/courts` แล้ว Refresh ไม่ 404 (SPA fallback ใน vercel.json)
@@ -124,7 +131,11 @@ npm test
 | `booking.test.ts` | วงจรจอง → ส่งสลิป → รอตรวจ → พนักงานอนุมัติ → ใบเสร็จ 1 ใบ → ยกเลิก (ตรวจสถานะในฐานข้อมูล) |
 | `concurrency.test.ts` | 20 คนจองช่วงเดียวกันพร้อมกัน · ส่งสลิปซ้ำพร้อมกัน · อนุมัติซ้ำพร้อมกัน · งานหมดเวลาชนกับการอนุมัติ |
 | `payment.test.ts` | ตรวจฟอร์มสลิป: ไฟล์ปลอม, ยอดเงินผิดรูปแบบ, เลขอ้างอิง, field แปลกปลอม |
+<<<<<<< HEAD
 | `demo.test.ts` | โหมดสาธิต: ไม่กรอกเลขอ้างอิง, สลิปชัดอนุมัติเอง, สลิปไม่ชัดเข้าคิว, ยอดผิดถูกปฏิเสธ |
+=======
+| `demo.test.ts` | โหมดสาธิต: ไม่กรอกเลขอ้างอิง, สลิปยอดตรงอนุมัติเองทันที, ยอดผิดถูกปฏิเสธ, ปิดโหมดแล้วต้องรอพนักงาน |
+>>>>>>> 7911668a7e5d511f83e82c3f30e2b56c2428aac6
 | `security.test.ts` | CSRF, JWT ปลอม/หมดอายุ/alg none, IDOR, สิทธิ์ตาม role, ขนาดคำขอ, rate limit, env validation, RLS |
 | `unit.test.ts` | PromptPay payload/CRC, validator, กฎเวลา, timezone, path ของสลิป |
 | `admin.test.ts` | Audit Log ส่งค่าเป็นชนิดที่ถูกต้อง |

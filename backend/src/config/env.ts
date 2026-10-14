@@ -57,12 +57,18 @@ export const config = {
     bankAccountNo: env('PAYMENT_BANK_ACCOUNT_NO'),
   },
 
+<<<<<<< HEAD
   // โหมดสาธิต (สำหรับนำเสนอ/ทดสอบ): แสดง QR จำลอง + อนุมัติสลิปที่ยอดตรงและภาพชัดให้อัตโนมัติ
   // ค่าเริ่มต้น: เปิดเมื่อยังไม่ได้ตั้งบัญชีรับเงินจริง · ตั้ง PAYMENT_DEMO_MODE=true|false เพื่อบังคับ
   paymentDemoMode:
     env('PAYMENT_DEMO_MODE') !== ''
       ? env('PAYMENT_DEMO_MODE') === 'true'
       : !env('PAYMENT_PROMPTPAY_ID') && !env('PAYMENT_BANK_ACCOUNT_NO'),
+=======
+  // โหมดสาธิต (สำหรับนำเสนอ): แสดง QR จำลอง (ถ้ายังไม่มีบัญชีจริง) + อนุมัติสลิปที่ยอดตรงให้อัตโนมัติทันที
+  // เปิดเป็นค่าเริ่มต้น · ระบบรับเงินจริงต้องตั้ง PAYMENT_DEMO_MODE=false เพื่อให้เจ้าหน้าที่ตรวจทุกรายการ
+  paymentDemoMode: env('PAYMENT_DEMO_MODE') !== 'false',
+>>>>>>> 7911668a7e5d511f83e82c3f30e2b56c2428aac6
 };
 
 // =====================================================================
@@ -107,6 +113,15 @@ if (config.paymentDemoMode && config.nodeEnv !== 'test') {
 // ค่าคงที่ของ Business Rules (อ้างอิงตาราง BR ในรายงาน)
 export const BUSINESS_RULES = {
   HOLD_MINUTES: 15,              // BR3: ต้องชำระภายใน 15 นาที มิฉะนั้นยกเลิกอัตโนมัติ
+<<<<<<< HEAD
+=======
+  // BR3b: จำกัดจำนวน Hold (PENDING_PAYMENT) ที่มีผลพร้อมกันต่อบัญชี ไม่ว่าจะเป็นสนาม/วันไหนก็ตาม
+  // กันผู้ใช้เลี่ยง Rate Limit ปุ่มจองด้วยการเปลี่ยนสนามหรือวันที่ไปเรื่อยๆ
+  MAX_ACTIVE_HOLDS: 3,
+  // BR3c: ตรวจรูปแบบ "สร้างรายการแล้วทิ้งให้หมดเวลาซ้ำๆ" ภายในช่วงเวลาที่กำหนด (นับจาก booking ที่ EXPIRED)
+  ABUSE_WINDOW_HOURS: 24,
+  ABUSE_EXPIRED_THRESHOLD: 5,
+>>>>>>> 7911668a7e5d511f83e82c3f30e2b56c2428aac6
   MAX_ADVANCE_DAYS: 30,          // BR4: จองล่วงหน้าได้ไม่เกิน 30 วัน
   MIN_HOURS_BEFORE_CHANGE: 24,   // BR5: แก้ไขวัน/เวลาได้ก่อนเวลาใช้งานอย่างน้อย 24 ชม.
   CHECKIN_EARLY_MINUTES: 30,     // BR8: เช็คอินก่อนเวลาเริ่มได้ไม่เกิน 30 นาที

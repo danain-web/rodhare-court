@@ -1,5 +1,10 @@
+<<<<<<< HEAD
 ﻿import request from 'supertest';
 import { app, pool, registerAndGetCookie, deleteTestUsers, futureDate, uniqueSlipRef, VALID_PNG, CLEAR_SLIP_PNG, slipText, slipImage } from './helpers';
+=======
+import request from 'supertest';
+import { app, pool, registerAndGetCookie, deleteTestUsers, futureDate, VALID_PNG, CLEAR_SLIP_PNG } from './helpers';
+>>>>>>> 7911668a7e5d511f83e82c3f30e2b56c2428aac6
 import { config } from '../src/config/env';
 
 // =====================================================================
@@ -56,7 +61,11 @@ describe('Payment demo mode', () => {
 
   it('สลิปยอดตรง + ภาพชัด ไม่กรอกเลขอ้างอิง → อนุมัติอัตโนมัติ + ใบเสร็จ', async () => {
     const { bookingId, finalAmount } = await book(futureDate(17), '10:00', '11:00');
+<<<<<<< HEAD
     const res = await sendSlip(bookingId, finalAmount, slipImage(CLEAR_SLIP_PNG, slipText(finalAmount)));
+=======
+    const res = await sendSlip(bookingId, finalAmount, CLEAR_SLIP_PNG);
+>>>>>>> 7911668a7e5d511f83e82c3f30e2b56c2428aac6
     expect(res.status).toBe(201);
     expect(res.body.data.result).toBe('VERIFIED');
     expect(res.body.data.receipt.receiptNumber).toBeTruthy();
@@ -64,12 +73,17 @@ describe('Payment demo mode', () => {
     const booking = await pool.query('SELECT status FROM bookings WHERE booking_id = $1', [bookingId]);
     expect(booking.rows[0].status).toBe('CONFIRMED');
     const pay = await pool.query('SELECT status, verification_method, slip_reference FROM payments WHERE booking_id = $1', [bookingId]);
+<<<<<<< HEAD
     expect(pay.rows[0]).toMatchObject({ status: 'VERIFIED', verification_method: 'AUTO' });
     expect(pay.rows[0].slip_reference).toBeTruthy(); // เลขอ้างอิงที่อ่านจากรูป ใช้ตรวจสลิปซ้ำ
+=======
+    expect(pay.rows[0]).toMatchObject({ status: 'VERIFIED', verification_method: 'AUTO', slip_reference: null });
+>>>>>>> 7911668a7e5d511f83e82c3f30e2b56c2428aac6
     const receipts = await pool.query('SELECT total_amount FROM receipts WHERE booking_id = $1', [bookingId]);
     expect(Number(receipts.rows[0].total_amount)).toBe(finalAmount);
   });
 
+<<<<<<< HEAD
   it('ใช้สลิปใบเดิม (เลขที่รายการเดียวกัน) กับการจองอื่น → ปฏิเสธว่าสลิปซ้ำ', async () => {
     const ref = uniqueSlipRef('DUP');
     const first = await book(futureDate(17), '12:00', '13:00');
@@ -86,10 +100,37 @@ describe('Payment demo mode', () => {
     expect(res.body.data.result).toBe('MANUAL_REVIEW');
     const booking = await pool.query('SELECT status FROM bookings WHERE booking_id = $1', [bookingId]);
     expect(booking.rows[0].status).toBe('PENDING_PAYMENT');
+=======
+  it('ใช้สลิป demo ไฟล์เดิมซ้ำกับการจองอื่นได้ (ไม่มีเลขอ้างอิงให้ถือว่าซ้ำ)', async () => {
+    const { bookingId, finalAmount } = await book(futureDate(17), '12:00', '13:00');
+    const res = await sendSlip(bookingId, finalAmount, CLEAR_SLIP_PNG);
+    expect(res.body.data.result).toBe('VERIFIED');
+  });
+
+  it('สลิปภาพไม่ชัด → ยังอนุมัติอัตโนมัติ (โหมดสาธิตไม่ต้องรอพนักงาน)', async () => {
+    const { bookingId, finalAmount } = await book(futureDate(17), '14:00', '15:00');
+    const res = await sendSlip(bookingId, finalAmount, VALID_PNG); // ไฟล์เล็ก/ความละเอียดต่ำ
+    expect(res.body.data.result).toBe('VERIFIED');
+    const readable = res.body.data.checks.find((c: any) => c.code === 'READABLE');
+    expect(readable.passed).toBe(false); // ยังแสดงผลตรวจความชัดเป็นข้อมูลประกอบ
+    const booking = await pool.query('SELECT status FROM bookings WHERE booking_id = $1', [bookingId]);
+    expect(booking.rows[0].status).toBe('CONFIRMED');
+  });
+
+  it('ไม่ได้ตั้ง PAYMENT_DEMO_MODE → โหมดสาธิตเปิดเป็นค่าเริ่มต้น', () => {
+    const script = `require('./src/config/env').config.paymentDemoMode`;
+    const out = require('child_process').execFileSync(process.execPath, ['--import', 'tsx', '-p', script], {
+      cwd: require('path').resolve(__dirname, '..'),
+      env: { ...process.env, PAYMENT_DEMO_MODE: '' },
+      encoding: 'utf8',
+    });
+    expect(out.trim()).toBe('true');
+>>>>>>> 7911668a7e5d511f83e82c3f30e2b56c2428aac6
   });
 
   it('ยอดไม่ตรง → ปฏิเสธ แม้อยู่ในโหมดสาธิต', async () => {
     const { bookingId, finalAmount } = await book(futureDate(17), '16:00', '17:00');
+<<<<<<< HEAD
     const res = await sendSlip(bookingId, finalAmount + 10, slipImage(CLEAR_SLIP_PNG, slipText(finalAmount + 10)));
     expect(res.body.data.result).toBe('REJECTED');
   });
@@ -116,17 +157,30 @@ describe('Payment demo mode', () => {
     expect(res.status).toBe(400); // ไม่มียอดรูปแบบเงิน → ไม่ถือเป็นสลิป
   });
 
+=======
+    const res = await sendSlip(bookingId, finalAmount + 10, CLEAR_SLIP_PNG);
+    expect(res.body.data.result).toBe('REJECTED');
+  });
+
+>>>>>>> 7911668a7e5d511f83e82c3f30e2b56c2428aac6
   it('ปิดโหมดสาธิต → สลิปเดียวกันต้องรอพนักงานตรวจ', async () => {
     config.paymentDemoMode = false;
     try {
       const { bookingId, finalAmount } = await book(futureDate(17), '18:00', '19:00');
+<<<<<<< HEAD
       const res = await sendSlip(bookingId, finalAmount, slipImage(CLEAR_SLIP_PNG, slipText(finalAmount)));
+=======
+      const res = await sendSlip(bookingId, finalAmount, CLEAR_SLIP_PNG);
+>>>>>>> 7911668a7e5d511f83e82c3f30e2b56c2428aac6
       expect(res.body.data.result).toBe('MANUAL_REVIEW');
     } finally {
       config.paymentDemoMode = true;
     }
   });
 });
+<<<<<<< HEAD
 
 
 
+=======
+>>>>>>> 7911668a7e5d511f83e82c3f30e2b56c2428aac6

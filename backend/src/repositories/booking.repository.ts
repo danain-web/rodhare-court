@@ -199,6 +199,30 @@ export class BookingRepository {
     return parseInt(result.rows[0]?.unpaid_count || '0') > 0;
   }
 
+<<<<<<< HEAD
+=======
+  // BR3b: จำนวน Hold ที่ยังมีผลของผู้ใช้ (PENDING_PAYMENT ทั้งหมด ไม่จำกัดสนาม/วัน)
+  // เรียกหลัง expireStaleHolds(userId) แล้วเท่านั้น เพื่อไม่ให้ Hold ที่หมดเวลาจริงมานับรวมด้วย
+  async countActiveHolds(conn: DbConnection, userId: number): Promise<number> {
+    const res = await conn.query<{ cnt: string }>(
+      `SELECT COUNT(*) AS cnt FROM bookings WHERE user_id = $1 AND status = 'PENDING_PAYMENT'`,
+      [userId]
+    );
+    return parseInt(res.rows[0]?.cnt || '0');
+  }
+
+  // BR3c: จำนวนการจองที่ผู้ใช้สร้างแล้วถูกยกเลิกอัตโนมัติเพราะไม่ชำระ (EXPIRED) ภายใน N ชั่วโมงล่าสุด
+  // ใช้ตรวจรูปแบบ "สร้าง hold ทิ้งซ้ำๆ" ซึ่งนับรวมทุกสนาม/วันที่ (ไม่ใช่แค่จำนวนครั้งที่กดปุ่ม)
+  async countRecentExpired(conn: DbConnection, userId: number, hours: number): Promise<number> {
+    const res = await conn.query<{ cnt: string }>(
+      `SELECT COUNT(*) AS cnt FROM bookings
+        WHERE user_id = $1 AND status = 'EXPIRED' AND created_at > NOW() - ($2 || ' hours')::INTERVAL`,
+      [userId, hours]
+    );
+    return parseInt(res.rows[0]?.cnt || '0');
+  }
+
+>>>>>>> 7911668a7e5d511f83e82c3f30e2b56c2428aac6
   async hasPendingPayment(conn: DbConnection, bookingId: number): Promise<boolean> {
     const res = await conn.query<{ cnt: string }>(
       `SELECT COUNT(*) AS cnt FROM payments WHERE booking_id = $1 AND status = 'PENDING'`,

@@ -49,7 +49,11 @@ export interface NotificationItem {
 
 // ผลการตรวจสลิปอัตโนมัติ (Auto-Slip Verification)
 export interface SlipCheck {
+<<<<<<< HEAD
   code: 'FILE' | 'DUPLICATE' | 'AMOUNT' | 'SLIP_CONTENT' | 'READABLE';
+=======
+  code: 'FILE' | 'DUPLICATE' | 'AMOUNT' | 'READABLE';
+>>>>>>> 7911668a7e5d511f83e82c3f30e2b56c2428aac6
   label: string;
   passed: boolean;
   detail: string;

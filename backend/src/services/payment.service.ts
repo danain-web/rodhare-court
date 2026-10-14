@@ -23,7 +23,10 @@ import {
   createSignedSlipUrls,
   StoredSlip,
 } from '../utils/slipStorage';
+<<<<<<< HEAD
 import { readSlipImage, SlipOcrResult } from '../utils/slipOcr';
+=======
+>>>>>>> 7911668a7e5d511f83e82c3f30e2b56c2428aac6
 
 // เทียบเงินเป็นหน่วยสตางค์ (จำนวนเต็ม) กันปัญหาทศนิยมของ floating point
 const toSatang = (baht: number) => Math.round(baht * 100);
@@ -52,6 +55,7 @@ export class PaymentService {
     // ตรวจไฟล์ก่อนเปิด Transaction (ไฟล์ผิดประเภท/ใหญ่เกินไม่ต้องแตะฐานข้อมูล)
     const validated = validateSlipBuffer(input.slipBuffer, input.slipMimeType);
 
+<<<<<<< HEAD
     // อ่านข้อความในรูปด้วย OCR — รูปที่ไม่ใช่สลิปโอนเงินถูกปฏิเสธทันที (ไม่อัปโหลด ไม่สร้าง payment)
     // ถ้า OCR ล้มเหลว (ดาวน์โหลดภาษาไม่ได้/timeout) จะไม่อนุมัติอัตโนมัติ แต่ส่งให้พนักงานตรวจเอง
     let ocr: SlipOcrResult | null = null;
@@ -64,6 +68,8 @@ export class PaymentService {
       throw AppError.badRequest('รูปที่อัปโหลดไม่ใช่สลิปโอนเงิน (ระบบไม่พบข้อความ/ยอดเงินของสลิป) กรุณาอัปโหลดรูปสลิปที่เห็นยอดเงินชัดเจน');
     }
 
+=======
+>>>>>>> 7911668a7e5d511f83e82c3f30e2b56c2428aac6
     // BR3: ถ้าเลย 15 นาทีแล้ว ยกเลิกการจองก่อน
     await withTransaction((conn) => expireStaleHolds(conn, { bookingId: input.bookingId }));
 
@@ -98,8 +104,12 @@ export class PaymentService {
         // ========================================================
         stored = await uploadSlipToSupabase(booking.bookingId, validated);
         const slip = stored;
+<<<<<<< HEAD
         // ลูกค้าไม่ต้องกรอกเลขอ้างอิง → ใช้เลขที่อ่านจากรูปตรวจสลิปซ้ำแทน
         const slipRef = input.slipReference ?? ocr?.reference ?? undefined;
+=======
+        const slipRef = input.slipReference;
+>>>>>>> 7911668a7e5d511f83e82c3f30e2b56c2428aac6
 
         // ---------- ตรวจสลิปเบื้องต้น (ข้อมูลประกอบ ไม่ใช่การยืนยันการชำระเงิน) ----------
         const checks: SlipCheck[] = [];
@@ -122,15 +132,20 @@ export class PaymentService {
         }
 
         // ยอดที่ต้องชำระมาจาก booking.final_amount ที่ backend คำนวณ ไม่ใช่จาก client
+<<<<<<< HEAD
         // ยอดต้องตรงทั้ง "ยอดที่กรอก" และ "ยอดที่อ่านจากรูปสลิป" (ถ้าอ่านได้)
         const typedOk = amountsEqual(input.amount, booking.finalAmount);
         const ocrRead = ocr?.amount != null;
         const ocrOk = !ocrRead || ocr!.amounts.some((a) => amountsEqual(a, booking.finalAmount));
         const amountOk = typedOk && ocrOk;
+=======
+        const amountOk = amountsEqual(input.amount, booking.finalAmount);
+>>>>>>> 7911668a7e5d511f83e82c3f30e2b56c2428aac6
         checks.push({
           code: 'AMOUNT',
           label: 'ยอดเงินตรงกับยอดจอง',
           passed: amountOk,
+<<<<<<< HEAD
           detail: `ยอดที่กรอก ฿${input.amount.toFixed(2)} / ยอดที่อ่านจากรูปสลิป ${ocrRead ? `฿${ocr!.amount!.toFixed(2)}` : 'อ่านไม่ได้'} / ยอดที่ต้องชำระ ฿${booking.finalAmount.toFixed(2)}`,
         });
         checks.push({
@@ -138,6 +153,9 @@ export class PaymentService {
           label: 'รูปเป็นสลิปโอนเงินและอ่านยอดจากรูปได้',
           passed: !!ocr?.isSlip && ocrRead,
           detail: !ocr ? 'ระบบอ่านรูปอัตโนมัติไม่สำเร็จ — รอพนักงานตรวจ' : ocrRead ? 'พบข้อความสลิปและอ่านยอดเงินจากรูปได้' : 'อ่านยอดเงินจากรูปไม่ได้ — รอพนักงานตรวจ',
+=======
+          detail: `ยอดในสลิป ฿${input.amount.toFixed(2)} / ยอดที่ต้องชำระ ฿${booking.finalAmount.toFixed(2)}`,
+>>>>>>> 7911668a7e5d511f83e82c3f30e2b56c2428aac6
         });
 
         const unclear: string[] = [];
@@ -164,10 +182,16 @@ export class PaymentService {
 
         // ---------- ผลที่ 1: ปฏิเสธอัตโนมัติ (สลิปซ้ำ / ยอดไม่ตรง) ----------
         if (dup || !amountOk) {
+<<<<<<< HEAD
           const shown = ocrRead && !ocrOk ? ocr!.amount! : input.amount;
           const reason = dup
             ? `สลิปซ้ำ: เลขอ้างอิง ${slipRef} ถูกใช้แล้วกับการจอง ${dup.bookingNumber}`
             : `ยอดเงินในสลิป (฿${shown.toFixed(2)}) ไม่ตรงกับยอดที่ต้องชำระ (฿${booking.finalAmount.toFixed(2)})`;
+=======
+          const reason = dup
+            ? `สลิปซ้ำ: เลขอ้างอิง ${slipRef} ถูกใช้แล้วกับการจอง ${dup.bookingNumber}`
+            : `ยอดเงินในสลิป (฿${input.amount.toFixed(2)}) ไม่ตรงกับยอดที่ต้องชำระ (฿${booking.finalAmount.toFixed(2)})`;
+>>>>>>> 7911668a7e5d511f83e82c3f30e2b56c2428aac6
           const paymentId = await this.paymentRepository.insertPayment(conn, {
             ...base,
             slipReference: dup ? null : slipRef,
@@ -188,9 +212,16 @@ export class PaymentService {
           return { result: 'REJECTED' as const, message: reason, checks, payment: rejected };
         }
 
+<<<<<<< HEAD
         // ---------- ผลที่ 2 (เฉพาะโหมดสาธิต): ยอดตรงและภาพชัด → อนุมัติอัตโนมัติ + ออกใบเสร็จ ----------
         // ใช้สำหรับนำเสนอ/ทดสอบด้วยสลิป demo — ระบบจริง (ตั้งบัญชีรับเงินแล้ว) จะไม่เข้าเงื่อนไขนี้
         if (config.paymentDemoMode && unclear.length === 0 && ocrRead) {
+=======
+        // ---------- ผลที่ 2 (เฉพาะโหมดสาธิต): ยอดตรง → อนุมัติอัตโนมัติทันที + ออกใบเสร็จ ----------
+        // ใช้สำหรับนำเสนอด้วยสลิป demo (ภาพไม่ชัดก็ผ่าน ผลตรวจความชัดแสดงเป็นข้อมูลประกอบ)
+        // ระบบรับเงินจริงต้องตั้ง PAYMENT_DEMO_MODE=false → ไปผลที่ 3 ให้เจ้าหน้าที่ตรวจ
+        if (config.paymentDemoMode) {
+>>>>>>> 7911668a7e5d511f83e82c3f30e2b56c2428aac6
           const paymentId = await this.paymentRepository.insertPayment(conn, { ...base, status: 'PENDING', verificationMethod: 'AUTO' });
           await insertStatusHistory(conn, booking.bookingId, 'PENDING_PAYMENT', `ส่งสลิปแล้ว (payment #${paymentId}) — โหมดสาธิต: ระบบอนุมัติอัตโนมัติ`, userId);
           const { receipt } = await this.confirmPayment(conn, { paymentId }, booking, null, ipAddress);
@@ -204,9 +235,13 @@ export class PaymentService {
         }
 
         // ---------- ผลที่ 3: รอพนักงานยืนยันยอดเงินเข้าบัญชี ----------
+<<<<<<< HEAD
         const reviewReason = !ocrRead
           ? 'ระบบอ่านยอดเงินจากรูปสลิปไม่ได้ — พนักงานต้องตรวจยอดจากรูปและบัญชีเอง'
           : unclear.length
+=======
+        const reviewReason = unclear.length
+>>>>>>> 7911668a7e5d511f83e82c3f30e2b56c2428aac6
           ? `ตรวจเบื้องต้นผ่าน แต่ภาพอาจไม่ชัด: ${unclear.join(', ')}`
           : 'ตรวจเบื้องต้นผ่าน (ยอดตรงกับยอดจอง) — รอยืนยันยอดเงินเข้าบัญชี';
         const paymentId = await this.paymentRepository.insertPayment(conn, { ...base, status: 'PENDING', verificationMethod: 'MANUAL', reviewReason });
