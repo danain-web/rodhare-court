@@ -163,9 +163,10 @@ export class PaymentService {
           return { result: 'REJECTED' as const, message: reason, checks, payment: rejected };
         }
 
-        // ---------- ผลที่ 2 (เฉพาะโหมดสาธิต): ยอดตรงและภาพชัด → อนุมัติอัตโนมัติ + ออกใบเสร็จ ----------
-        // ใช้สำหรับนำเสนอ/ทดสอบด้วยสลิป demo — ระบบจริง (ตั้งบัญชีรับเงินแล้ว) จะไม่เข้าเงื่อนไขนี้
-        if (config.paymentDemoMode && unclear.length === 0) {
+        // ---------- ผลที่ 2 (เฉพาะโหมดสาธิต): ยอดตรง → อนุมัติอัตโนมัติทันที + ออกใบเสร็จ ----------
+        // ใช้สำหรับนำเสนอด้วยสลิป demo (ภาพไม่ชัดก็ผ่าน ผลตรวจความชัดแสดงเป็นข้อมูลประกอบ)
+        // ระบบรับเงินจริงต้องตั้ง PAYMENT_DEMO_MODE=false → ไปผลที่ 3 ให้เจ้าหน้าที่ตรวจ
+        if (config.paymentDemoMode) {
           const paymentId = await this.paymentRepository.insertPayment(conn, { ...base, status: 'PENDING', verificationMethod: 'AUTO' });
           await insertStatusHistory(conn, booking.bookingId, 'PENDING_PAYMENT', `ส่งสลิปแล้ว (payment #${paymentId}) — โหมดสาธิต: ระบบอนุมัติอัตโนมัติ`, userId);
           const { receipt } = await this.confirmPayment(conn, { paymentId }, booking, null, ipAddress);

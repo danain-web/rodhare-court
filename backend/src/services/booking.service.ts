@@ -129,92 +129,132 @@ export class BookingService {
 
   // ---------------- UC-3: จองสนาม (Transaction เดียว: BOOKINGS + BOOKING_EQUIPMENT + EQUIPMENT + HISTORY + NOTIFICATIONS + AUDIT) ----------------
   async createBooking(userId: number, input: CreateBookingInput, ipAddress?: string): Promise<BookingDTO> {
-    return withTransaction(async (conn) => {
-      // BR1: ต้องเป็นสมาชิกสถานะปกติ
-      const user = await this.bookingRepository.lockUser(conn, userId);
-      if (!user) throw AppError.unauthorized('ไม่พบผู้ใช้งาน กรุณาเข้าสู่ระบบใหม่');
-      if (!user.isActive) throw AppError.forbidden('บัญชีผู้ใช้ถูกระงับ ไม่สามารถจองสนามได้');
+    // ตรวจรูปแบบ "สร้างรายการแล้วทิ้งให้หมดเวลาซ้ำๆ" (BR3c) — เก็บไว้เขียน Audit หลัง Transaction หลัก
+    // ROLLBACK เท่านั้น (เขียนขณะ FOR UPDATE ล็อกแถว users ค้างอยู่จะติด Deadlock กับ Transaction นี้เอง)
+    let suspiciousAbuse: { recentExpired: number } | null = null;
+    try {
+      return await withTransaction(async (conn) => {
+        // BR1: ต้องเป็นสมาชิกสถานะปกติ
+        const user = await this.bookingRepository.lockUser(conn, userId);
+        if (!user) throw AppError.unauthorized('ไม่พบผู้ใช้งาน กรุณาเข้าสู่ระบบใหม่');
+        if (!user.isActive) throw AppError.forbidden('บัญชีผู้ใช้ถูกระงับ ไม่สามารถจองสนามได้');
 
-      // ล็อกแถวสนามก่อนตรวจการจองทับ (คนที่ 2 ที่กดพร้อมกันต้องรอจน Transaction แรก COMMIT)
-      const court = await this.bookingRepository.lockCourt(conn, input.courtId);
-      if (!court) throw AppError.notFound('ไม่พบสนามที่เลือก');
+        // ล็อกแถวสนามก่อนตรวจการจองทับ (คนที่ 2 ที่กดพร้อมกันต้องรอจน Transaction แรก COMMIT)
+        const court = await this.bookingRepository.lockCourt(conn, input.courtId);
+        if (!court) throw AppError.notFound('ไม่พบสนามที่เลือก');
 
-      if (await this.bookingRepository.hasUnpaidFines(conn, userId)) {
-        throw AppError.forbidden('ไม่สามารถจองสนามได้ เนื่องจากคุณมีค่าปรับค้างชำระ กรุณาชำระค่าปรับก่อน');
-      }
+        if (await this.bookingRepository.hasUnpaidFines(conn, userId)) {
+          throw AppError.forbidden('ไม่สามารถจองสนามได้ เนื่องจากคุณมีค่าปรับค้างชำระ กรุณาชำระค่าปรับก่อน');
+        }
 
-      await this.validateSlot(conn, {
-        court,
-        userId,
-        bookingDate: input.bookingDate,
-        startTime: input.startTime,
-        endTime: input.endTime,
-      });
+        // BR3b/BR3c: ปล่อย Hold ที่หมดเวลาของผู้ใช้นี้ก่อน แล้วค่อยตรวจโควต้า — กันการเลี่ยง Rate Limit ปุ่มจอง
+        // ด้วยการเปลี่ยนสนามหรือวันที่ไปเรื่อยๆ (จำกัดที่ "จำนวน Hold ที่มีผล" ไม่ใช่ "จำนวนครั้งที่กด")
+        await expireStaleHolds(conn, { userId });
 
-      const pricing = await this.pricingService.calculate(conn, {
-        courtId: court.courtId,
-        sportTypeId: court.sportTypeId,
-        courtHourlyRate: court.hourlyRate,
-        bookingDate: input.bookingDate,
-        startTime: input.startTime,
-        endTime: input.endTime,
-        equipmentItems: input.equipmentItems,
-        promotionCode: input.promotionCode,
-        userId,
-      });
+        const activeHolds = await this.bookingRepository.countActiveHolds(conn, userId);
+        if (activeHolds >= BUSINESS_RULES.MAX_ACTIVE_HOLDS) {
+          throw AppError.conflict(
+            `คุณมีรายการจองที่รอชำระเงินอยู่แล้ว ${activeHolds} รายการ (สูงสุด ${BUSINESS_RULES.MAX_ACTIVE_HOLDS} รายการต่อบัญชี) กรุณาชำระเงินหรือยกเลิกรายการเดิมก่อนจองใหม่`
+          );
+        }
 
-      const bookingNumber = generateBookingNumber(input.bookingDate);
-      const bookingId = await this.bookingRepository.insertBooking(conn, {
-        bookingNumber,
-        userId,
-        courtId: court.courtId,
-        bookingDate: input.bookingDate,
-        startTime: input.startTime,
-        endTime: input.endTime,
-        totalCourtFee: pricing.courtFee,
-        totalEquipmentFee: pricing.equipmentFee,
-        discountAmount: pricing.discountAmount,
-        finalAmount: pricing.finalAmount,
-        promotionId: pricing.promotionId ?? null,
-        holdMinutes: BUSINESS_RULES.HOLD_MINUTES,
-      });
+        const recentExpired = await this.bookingRepository.countRecentExpired(conn, userId, BUSINESS_RULES.ABUSE_WINDOW_HOURS);
+        if (recentExpired >= BUSINESS_RULES.ABUSE_EXPIRED_THRESHOLD) {
+          suspiciousAbuse = { recentExpired };
+          throw AppError.forbidden(
+            `สร้างรายการจองแล้วไม่ชำระเงินบ่อยเกินไปในช่วง ${BUSINESS_RULES.ABUSE_WINDOW_HOURS} ชั่วโมงที่ผ่านมา (${recentExpired} ครั้ง) ระบบระงับการจองใหม่ชั่วคราว กรุณาติดต่อเจ้าหน้าที่หากต้องการความช่วยเหลือ`
+          );
+        }
 
-      await this.reserveEquipment(conn, bookingId, pricing.equipmentDetails);
+        await this.validateSlot(conn, {
+          court,
+          userId,
+          bookingDate: input.bookingDate,
+          startTime: input.startTime,
+          endTime: input.endTime,
+        });
 
-      await insertStatusHistory(
-        conn,
-        bookingId,
-        'PENDING_PAYMENT',
-        `สร้างการจองแล้ว รอชำระเงินภายใน ${BUSINESS_RULES.HOLD_MINUTES} นาที`,
-        userId
-      );
-      await insertNotification(conn, {
-        userId,
-        bookingId,
-        title: 'สร้างการจองสำเร็จ (Booking Created)',
-        message: `การจอง ${bookingNumber} สนาม ${court.name} วันที่ ${input.bookingDate} ${input.startTime}-${input.endTime} ยอดชำระ ฿${pricing.finalAmount.toFixed(2)} กรุณาชำระและส่งสลิปภายใน ${BUSINESS_RULES.HOLD_MINUTES} นาที`,
-        type: 'INFO',
-      });
-      await insertAudit(conn, {
-        userId,
-        action: 'CREATE_BOOKING',
-        entityName: 'BOOKINGS',
-        entityId: bookingId,
-        newValues: {
+        const pricing = await this.pricingService.calculate(conn, {
+          courtId: court.courtId,
+          sportTypeId: court.sportTypeId,
+          courtHourlyRate: court.hourlyRate,
+          bookingDate: input.bookingDate,
+          startTime: input.startTime,
+          endTime: input.endTime,
+          equipmentItems: input.equipmentItems,
+          promotionCode: input.promotionCode,
+          userId,
+        });
+
+        const bookingNumber = generateBookingNumber(input.bookingDate);
+        const bookingId = await this.bookingRepository.insertBooking(conn, {
           bookingNumber,
+          userId,
           courtId: court.courtId,
           bookingDate: input.bookingDate,
           startTime: input.startTime,
           endTime: input.endTime,
+          totalCourtFee: pricing.courtFee,
+          totalEquipmentFee: pricing.equipmentFee,
+          discountAmount: pricing.discountAmount,
           finalAmount: pricing.finalAmount,
-          equipment: pricing.equipmentDetails.map((e) => ({ equipmentId: e.equipmentId, quantity: e.quantity })),
-          promotion: pricing.promotionDetails?.code,
-        },
-        ipAddress,
-      });
+          promotionId: pricing.promotionId ?? null,
+          holdMinutes: BUSINESS_RULES.HOLD_MINUTES,
+        });
 
-      return (await this.bookingRepository.getBookingById(conn, bookingId))!;
-    }, userId);
+        await this.reserveEquipment(conn, bookingId, pricing.equipmentDetails);
+
+        await insertStatusHistory(
+          conn,
+          bookingId,
+          'PENDING_PAYMENT',
+          `สร้างการจองแล้ว รอชำระเงินภายใน ${BUSINESS_RULES.HOLD_MINUTES} นาที`,
+          userId
+        );
+        await insertNotification(conn, {
+          userId,
+          bookingId,
+          title: 'สร้างการจองสำเร็จ (Booking Created)',
+          message: `การจอง ${bookingNumber} สนาม ${court.name} วันที่ ${input.bookingDate} ${input.startTime}-${input.endTime} ยอดชำระ ฿${pricing.finalAmount.toFixed(2)} กรุณาชำระและส่งสลิปภายใน ${BUSINESS_RULES.HOLD_MINUTES} นาที`,
+          type: 'INFO',
+        });
+        await insertAudit(conn, {
+          userId,
+          action: 'CREATE_BOOKING',
+          entityName: 'BOOKINGS',
+          entityId: bookingId,
+          newValues: {
+            bookingNumber,
+            courtId: court.courtId,
+            bookingDate: input.bookingDate,
+            startTime: input.startTime,
+            endTime: input.endTime,
+            finalAmount: pricing.finalAmount,
+            equipment: pricing.equipmentDetails.map((e) => ({ equipmentId: e.equipmentId, quantity: e.quantity })),
+            promotion: pricing.promotionDetails?.code,
+          },
+          ipAddress,
+        });
+
+        return (await this.bookingRepository.getBookingById(conn, bookingId))!;
+      }, userId);
+    } catch (err) {
+      if (suspiciousAbuse) {
+        // Transaction หลัก ROLLBACK ไปแล้ว (คลายล็อกแถว users แล้ว) — เขียน Audit ปลอดภัยด้วย Transaction ใหม่
+        await withTransaction(
+          (auditConn) =>
+            insertAudit(auditConn, {
+              userId,
+              action: 'BLOCK_SUSPICIOUS_BOOKING',
+              entityName: 'BOOKINGS',
+              newValues: { recentExpired: suspiciousAbuse!.recentExpired, windowHours: BUSINESS_RULES.ABUSE_WINDOW_HOURS },
+              ipAddress,
+            }),
+          userId
+        ).catch(() => {/* ไม่ให้ error ของการบันทึก audit บังข้อผิดพลาดเดิม */});
+      }
+      throw err;
+    }
   }
 
   // ตัดสต็อกอุปกรณ์ที่จอง (เรียงตาม equipment_id เพื่อลดโอกาส deadlock) แล้วบันทึก BOOKING_EQUIPMENT

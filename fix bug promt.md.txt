@@ -1,0 +1,553 @@
+# MASTER PROMPT: Full-System Audit, Bug Fix, Security Hardening & Production Readiness — Rodhare Court
+
+คุณคือ **Principal Full-Stack Engineer, Senior Application Security Engineer, QA Architect และ Senior UX/UI Engineer** ที่รับผิดชอบปรับปรุง Web Application สำหรับจองสนามกีฬาให้มีความปลอดภัย เชื่อถือได้ ใช้งานง่าย และพร้อม Deploy ใน Production
+
+คุณต้องทำงานกับ Source Code ของโปรเจกต์ **Rodhare Court** ที่มีอยู่จริง โดยตรวจสอบทั้ง Frontend, Backend, Database, Authentication, Booking, Payment, File Storage, UI/UX, Accessibility, Performance, Testing และ Deployment
+
+เป้าหมายไม่ใช่การสร้างรายงานหรือเขียนตัวอย่างโค้ด แต่คือการ **ตรวจสอบ แก้ไข และทดสอบปัญหาทั้งหมดที่พบใน Repository จริง** โดยรักษาฟีเจอร์เดิมที่ยังถูกต้อง และไม่สร้าง Regression ให้กับระบบ
+
+---
+
+## กฎการทำงานที่ต้องปฏิบัติตาม
+
+1. อ่านโครงสร้าง Repository และ Source Code ที่เกี่ยวข้องก่อนแก้ไข ห้ามคาดเดาการทำงานของระบบจากชื่อไฟล์เพียงอย่างเดียว
+2. ใช้ Tech Stack, Framework, Database และ Architecture ที่มีอยู่เดิม เว้นแต่มีเหตุผลทางวิศวกรรมที่ชัดเจนว่าจำเป็นต้องเปลี่ยน
+3. ตรวจสอบ Findings จาก Code Review ก่อนแก้ไข แยกข้อบกพร่องที่ยืนยันได้จากโค้ดออกจากความเสี่ยงที่ยังต้องทดสอบ
+4. แก้โค้ดจริงในไฟล์ต้นฉบับ สร้าง Migration, Automated Tests และเอกสารที่จำเป็น ไม่ตอบกลับเป็นเพียง Pseudocode
+5. ห้ามแก้ปัญหาด้วยการปิด Security Checks, ปิด Tests, ลด Validation, ซ่อน Error หรือเปลี่ยนให้ระบบผ่าน Test โดยไม่รักษาพฤติกรรมที่ถูกต้อง
+6. ห้ามลบฟีเจอร์เดิมเพื่อหลีกเลี่ยงการแก้บั๊ก และห้ามเปลี่ยน API Contract โดยไม่ตรวจสอบผลกระทบกับทุก Consumer
+7. ห้าม Hardcode Secret, Password, API Key, JWT Secret หรือ Credentials จริงลงใน Source Code
+8. ห้ามใช้ Mock, Fake Success, Random Transaction Reference หรือข้อมูลสมมติเพื่อทำให้ระบบ Production ดูเหมือนทำงานสำเร็จ
+9. หากไม่มี Credentials หรือ Payment Provider Integration ที่จำเป็น ให้สร้าง Safe Fallback ที่ใช้งานได้จริง เช่น Manual Review Workflow แทนการแสร้งว่ายืนยันธุรกรรมสำเร็จ
+10. ทำงานต่อเนื่องจนเสร็จเท่าที่ Environment อนุญาต หากมีข้อจำกัด ให้แก้ส่วนที่ทำได้ก่อนและรายงานข้อจำกัดอย่างตรงไปตรงมา
+11. ห้ามกล่าวว่าแก้ไขหรือทดสอบสำเร็จ หากไม่มีการเปลี่ยนโค้ดหรือไม่มีผลลัพธ์การทดสอบยืนยันจริง
+12. หลังแก้ไขแต่ละส่วน ให้รัน Test หรือ Static Analysis ที่เกี่ยวข้อง เพื่อให้ตรวจพบ Regression ได้เร็วที่สุด
+
+## Phase 1: Repository Discovery และ Technical Audit
+
+เริ่มจากสำรวจโปรเจกต์ทั้งหมด ไม่จำกัดเฉพาะไฟล์ที่ระบุด้านล่าง
+
+ตรวจสอบอย่างน้อย:
+
+- `package.json` และ Lockfiles
+- Frontend Routes, Components, Hooks, API Clients และ State Management
+- Backend Routes, Controllers, Services, Middleware และ Utilities
+- Database Schema, SQL Migrations, Indexes, Constraints และ Transaction Boundaries
+- Authentication, Authorization, JWT, Cookies, CORS และ Rate Limiting
+- Booking Lifecycle, Payment Lifecycle, Receipt Generation และ Expiration Jobs
+- Supabase Configuration, Storage Buckets, RLS Policies และ Database Permissions
+- `.env`, `.env.example`, `.gitignore`, Git History และ Environment Configuration
+- Logging, Error Handling, Monitoring, CI/CD และ Deployment Configuration
+- Unit Tests, Integration Tests, End-to-End Tests และ Test Scripts
+
+ให้ตรวจสอบไฟล์ที่เกี่ยวข้องกับ Findings ต่อไปนี้เป็นพิเศษ:
+
+- `backend/src/services/payment.service.ts`
+- `backend/src/utils/slipStorage.ts`
+- `backend/src/utils/jwt.ts`
+- `backend/src/config/env.ts`
+- `backend/src/services/booking.service.ts`
+- `backend/src/app.ts`
+- `frontend/src/pages/CustomerPaymentPage.tsx`
+- `frontend/src/pages/CreateBookingPage.tsx`
+
+หากเส้นทางไฟล์เปลี่ยนไป ให้ค้นหาไฟล์ที่มีหน้าที่ตรงกันจาก Repository จริง
+
+ก่อนแก้ไข ให้จัดทำรายการ Findings ที่มี Severity, Evidence, Root Cause, ผลกระทบ และวิธีแก้ไข จากนั้นเริ่มลงมือแก้ทันที ไม่ต้องหยุดเพื่อถามอนุมัติแผนงาน
+
+---
+
+## Phase 2: P0 — Critical Security Fixes
+
+### 2.1 Secret Management และ Credential Exposure
+
+ตรวจสอบว่ามี Secret หรือ Credentials อยู่ใน ZIP, Source Code, Git History, Logs, Build Artifacts หรือ Frontend Bundle หรือไม่
+
+ดำเนินการดังนี้:
+
+- นำ `.env` ที่มี Secret จริงออกจาก Source Control และชุดไฟล์ที่ไม่ควรเผยแพร่
+- เพิ่มหรือปรับปรุง `.gitignore` ให้ครอบคลุม Environment Files, Logs, Build Outputs และไฟล์ชั่วคราว
+- สร้าง `.env.example` ที่มีเฉพาะชื่อ Variable และ Placeholder โดยไม่มี Secret จริง
+- ปรับ Environment Validation ให้ Fail Fast เมื่อ Required Environment Variables ไม่มีค่า รูปแบบผิด หรือใช้ค่าเริ่มต้นที่ไม่ปลอดภัย
+- ห้ามมี Default JWT Secret เช่น `change_me_to_a_long_random_string` ใน Runtime Configuration
+- ตรวจสอบว่า Backend ไม่ส่ง Secret, Stack Trace หรือ Internal Configuration กลับไปยัง Client
+- ใช้ Secret Manager หรือ Platform Environment Variables สำหรับ Production
+- เพิ่ม Secret Scanning ใน CI หากเหมาะสม
+
+หากพบ Credentials ที่อาจถูกเปิดเผย ให้ระบุรายการที่ต้อง Rotate อย่างชัดเจน ห้ามอ้างว่าได้เพิกถอนหรือเปลี่ยน Secret บนบริการจริงแล้ว หากยังไม่ได้ดำเนินการผ่านผู้ให้บริการ
+
+การลบ Secret ออกจาก Commit ล่าสุดไม่ได้หมายความว่า Secret ใน Git History ปลอดภัยแล้ว ต้องจัดทำขั้นตอนตรวจสอบและแก้ไข History อย่างระมัดระวัง โดยไม่ทำลาย Repository ที่ใช้งานอยู่โดยไม่จำเป็น
+
+### 2.2 Payment Verification
+
+ตรวจสอบทุกเส้นทางที่ทำให้การจองเปลี่ยนเป็นสถานะชำระเงินสำเร็จ รวมทั้ง API ที่เรียก `confirmPayment()` และการออกใบเสร็จ
+
+ข้อกำหนด:
+
+- ห้ามยืนยันการชำระเงินจากการตรวจ MIME Type, File Size, Image Clarity หรือการกรอก Transaction Reference เพียงอย่างเดียว
+- ห้ามถือว่าการอัปโหลดสลิปสำเร็จหมายถึงชำระเงินจริง
+- ห้ามอนุมัติธุรกรรมเพียงเพราะ Reference ไม่ซ้ำ
+- ห้ามเชื่อ Amount, Discount, Booking Price หรือ Payment Status ที่ส่งมาจาก Frontend โดยไม่ตรวจสอบฝั่ง Backend
+- ตรวจสอบผู้รับเงิน ยอดเงิน สกุลเงิน Transaction ID และสถานะธุรกรรมจากแหล่งที่เชื่อถือได้ หากผู้ให้บริการรองรับ
+- หากใช้ Payment Webhook ให้ตรวจ Signature จาก Raw Request Body ตามข้อกำหนดของ Provider ตรวจ Event ซ้ำ ป้องกัน Replay และรองรับ Idempotency
+- ห้ามเปิดเผย API Secret หรือ Service Role Key ให้ Client
+- การสร้าง Receipt ต้องผูกกับการชำระเงินที่ผ่านเงื่อนไขการยืนยันจริง
+- การยืนยันซ้ำต้องไม่สร้าง Receipt หรือ Payment Record ซ้ำ
+
+หากระบบยังไม่มี API สำหรับตรวจสอบการโอนเงินจริง ให้ใช้ Workflow ดังนี้:
+
+`AWAITING_PAYMENT → PAYMENT_SUBMITTED → PENDING_REVIEW → PAID`
+
+สำหรับการปฏิเสธให้มีสถานะที่ชัดเจน เช่น `PAYMENT_REJECTED` และกำหนดวิธีส่งหลักฐานใหม่ตาม Business Rules
+
+การเปลี่ยนไปเป็น `PAID` ต้องดำเนินการผ่าน Backend ที่ตรวจสิทธิ์และตรวจเงื่อนไขครบถ้วน ไม่ใช่เปิด Endpoint ให้ Client ส่งสถานะที่ต้องการได้เอง
+
+ห้ามสร้าง Payment Provider Integration ปลอม หากไม่มี Credentials ให้ทำ Manual Review Workflow ให้สมบูรณ์และจัดทำจุดเชื่อมต่อ Provider สำหรับภายหลัง
+
+### 2.3 Slip Storage และ Personal Data Protection
+
+ปรับ `backend/src/utils/slipStorage.ts` และระบบจัดเก็บไฟล์ที่เกี่ยวข้อง
+
+- เปลี่ยน Payment Slip Bucket เป็น Private
+- เอาการเผยแพร่สลิปผ่าน Public URL ออกจาก Flow
+- ให้ Backend ตรวจ Authentication และ Authorization ก่อนเข้าถึงไฟล์
+- ใช้ Signed URL อายุสั้นหากเหมาะสม
+- ตรวจสอบว่าผู้ใช้เข้าถึงได้เฉพาะไฟล์ที่เกี่ยวข้องกับการจองของตน
+- จำกัดสิทธิ์เจ้าหน้าที่ตาม Role และ Permission
+- ตรวจสอบนโยบายการเข้าถึงไฟล์เก่าที่เคยเปิดเป็น Public
+- ตรวจสอบ Access Logs และกำหนดแนวทางจัดการข้อมูลที่อาจถูกเข้าถึงโดยไม่ได้รับอนุญาต
+- รองรับการลบไฟล์ตาม Data Retention Policy และข้อกำหนดความเป็นส่วนตัวที่ใช้บังคับ
+
+อย่าถือว่าการเปลี่ยน Bucket เป็น Private เพียงอย่างเดียวเพียงพอ ต้องตรวจ RLS, Storage Policies และสิทธิ์ฝั่ง Backend ทั้งหมดด้วย
+
+---
+
+## Phase 3: P1 — Backend Security และ Data Integrity
+
+### 3.1 Authentication, Authorization และ CSRF
+
+ตรวจสอบ Authentication และ Authorization ทั้งระบบ
+
+- ทบทวน JWT Signing Algorithm, Secret Strength, Expiration, Issuer และ Audience ตามสถาปัตยกรรมที่ใช้งาน
+- ตรวจว่า Token ที่หมดอายุหรือ Invalid ไม่สามารถผ่าน Authentication ได้
+- ตรวจ Refresh Token, Revocation, Logout และ Session Lifecycle หากระบบรองรับ
+- ใช้ `HttpOnly`, `Secure` และ `SameSite` ของ Cookie อย่างเหมาะสม
+- ปรับ CORS ให้ Allowlist เฉพาะ Origin ที่จำเป็น
+- ห้ามใช้ CORS เป็นสิ่งทดแทน CSRF Protection
+- เพิ่ม CSRF Token หรือกลไกที่เหมาะสมสำหรับ Cookie-authenticated Requests ที่เปลี่ยนข้อมูล
+- ตรวจ `Origin` และใช้ `Referer` เป็นมาตรการเสริมตามความเหมาะสม
+- ใช้ RBAC หรือ Permission Checks สำหรับ Admin, Staff และ Customer
+- ตรวจ Object-Level Authorization ทุกครั้งที่เข้าถึง Booking, Payment, Receipt และ Uploaded File
+- ตรวจว่า Client ไม่สามารถเข้าถึงหรือแก้ไข Resource ของผู้ใช้รายอื่นด้วยการเปลี่ยน ID
+- เพิ่ม Rate Limiting ให้ Login, OTP หรือ Password Reset หากมี, Booking, Payment Upload และ Sensitive APIs
+- ป้องกัน Brute Force และการส่งคำขอซ้ำจำนวนมาก
+
+ห้ามแก้ Cookie Policy โดยไม่ทดสอบ Login, Logout, Cross-Origin Deployment และ Browser จริง
+
+### 3.2 Booking Concurrency และ Double Booking
+
+ตรวจสอบ `backend/src/services/booking.service.ts` และ Database Schema
+
+เป้าหมายคือห้ามมี Booking ที่ยืนยันแล้วหรือกำลัง Hold ซึ่งขัดแย้งกันบนสนามเดียวกันในช่วงเวลาที่ต้องห้ามซ้อน
+
+ดำเนินการดังนี้:
+
+- ใช้ Database Transaction สำหรับการตรวจ Availability และการสร้าง Booking
+- เลือก Locking Strategy ให้เหมาะกับ PostgreSQL และ Isolation Level ที่ใช้งาน
+- พิจารณา Database Constraint เช่น Exclusion Constraint สำหรับช่วงเวลา หาก Schema และช่วงเวลาที่ถือครองรองรับ
+- รองรับเวลาถือครองสนาม 15 นาทีตาม Business Rules เดิม โดยตรวจว่า Hold ที่หมดเวลาแล้วไม่บล็อกสนามต่อไป
+- จัดการ Time Zone อย่างสม่ำเสมอ โดยเฉพาะเวลาท้องถิ่นของสนามกับ Timestamp ในฐานข้อมูล
+- กำหนดสถานะและเงื่อนไข Transition ที่ชัดเจน
+- ป้องกันการอนุมัติ การยกเลิก หรือการหมดอายุที่ชนกันจนทำให้สถานะย้อนกลับหรือผิดลำดับ
+- ใช้ Idempotency Key สำหรับคำสั่งที่สร้างผลทางธุรกิจ หากเหมาะสม
+- บันทึกสถานะการเปลี่ยนแปลงที่ตรวจสอบย้อนหลังได้ โดยไม่บันทึกข้อมูลลับ
+
+ทดสอบกรณีสำคัญ:
+
+1. ผู้ใช้ 20 รายจองสนามเดียวกันในช่วงเวลาเดียวกันพร้อมกัน
+2. Client ส่ง Create Booking ซ้ำหลัง Request Timeout
+3. Booking เดียวกันได้รับ Payment Submission ซ้ำ
+4. Admin อนุมัติ Payment เดียวกันพร้อมกันสองคำขอ
+5. Booking Expiration Job ทำงานพร้อมกับ Payment Confirmation
+6. ผู้ใช้ยกเลิกระหว่างดำเนินการชำระเงิน
+7. มี Booking ติดกันพอดีช่วงเวลา และมี Booking ที่ทับซ้อนเพียง 1 นาที
+8. มีการส่งคำขอเข้ามาระหว่างเกิด Database Transaction Rollback
+
+ผลที่คาดหวังต้องนิยามตาม Business Rules และยืนยันด้วย Database State จริง ไม่ใช่ตรวจจาก Response ของ Frontend อย่างเดียว
+
+### 3.3 Server-Side Validation และ Business Rules
+
+- ให้ Backend คำนวณราคา ส่วนลด โปรโมชั่น และยอดสุทธิจากข้อมูลที่เชื่อถือได้
+- ตรวจ Operating Hours, วันหยุด, Court Availability, Duration, Equipment และ Promotion Eligibility
+- ตรวจ Input ว่าง, `NaN`, `Infinity`, ค่าติดลบ, ทศนิยมผิดรูปแบบ, Overflow และ Invalid Date
+- ตรวจ Price Precision และ Monetary Representation ให้เหมาะกับสกุลเงิน
+- ไม่ใช้ `Number(input) || booking.finalAmount` เป็นกลไกทดแทน Validation
+- แยก Invalid Input ออกจาก Valid Zero อย่างชัดเจน
+- กำหนด Schema Validation ให้ Request Params, Query และ Body ทุก Endpoint ที่สำคัญ
+- กำหนด Maximum Length, Allowed Characters และรูปแบบข้อมูล
+- ป้องกัน SQL Injection ด้วย Parameterized Queries
+- ป้องกัน Stored/Reflected XSS จากข้อมูลที่ผู้ใช้กรอก
+- ป้องกัน Mass Assignment โดยรับเฉพาะ Field ที่ Endpoint อนุญาต
+- ตั้ง Request Size Limit และ Timeout ที่เหมาะสม
+
+### 3.4 Transaction State Machine
+
+ออกแบบหรือปรับปรุงสถานะ Booking และ Payment ให้มี Transition ที่ถูกต้อง
+
+ตัวอย่างเชิงแนวคิด:
+
+- Booking: Pending, Confirmed, Cancelled, Expired
+- Payment: Unpaid, Submitted, Pending Review, Paid, Rejected, Refunded หากมี Refund
+- Receipt: สร้างได้เมื่อ Payment ผ่านเกณฑ์ที่กำหนดเท่านั้น
+
+ให้ใช้ชื่อสถานะที่ตรงกับระบบจริง และคงความเข้ากันได้กับข้อมูลเดิม
+
+ปฏิบัติตามข้อกำหนด:
+
+- ทุก Transition ต้องผ่าน Backend และตรวจสถานะปัจจุบัน
+- ไม่อนุญาต Transition ที่ผิดลำดับ
+- ป้องกัน State Update ที่ลบล้างผลการยืนยันที่ถูกต้อง
+- มี Audit Trail สำหรับ Admin Actions และ Payment Decisions
+- การทำงานซ้ำต้องปลอดภัย
+- การเปลี่ยนหลายตารางที่เป็น Business Transaction เดียวกันต้องมีความสอดคล้องของข้อมูล
+
+---
+
+## Phase 4: P1/P2 — File Upload Hardening
+
+ปรับระบบ Upload Slip ให้รับไฟล์อย่างปลอดภัยและไม่ทำให้ Backend ล่มจาก Memory Exhaustion
+
+- กำหนด File Size Limit ฝั่ง Server
+- จำกัดจำนวน Upload ต่อ User และ IP ตามความเหมาะสม
+- ตรวจ MIME Type และ File Signature ไม่พึ่งนามสกุลเพียงอย่างเดียว
+- กำหนดชนิดไฟล์ที่อนุญาตอย่างชัดเจน
+- ป้องกัน Path Traversal และชื่อไฟล์ที่อาจใช้โจมตีระบบ
+- สร้าง Storage Key จากค่าที่ Server ควบคุม ห้ามใช้ชื่อไฟล์จาก Client เป็น Storage Path โดยตรง
+- ใช้ Streaming หรือ Temporary File เมื่อเหมาะสม เพื่อลดการใช้ Memory
+- ตรวจการส่งไฟล์ชนิดที่ไม่อนุญาตและไฟล์ที่มีเนื้อหาผิดรูปแบบ
+- พิจารณาถอด Metadata ของภาพที่ไม่จำเป็น
+- ป้องกันการ Upload ภาพขนาดใหญ่หรือหลายไฟล์พร้อมกันจนเกินทรัพยากร
+- ทำความสะอาด Temporary Files เมื่อเกิด Error
+- ใช้ Generic Error Message สำหรับ Client และเก็บรายละเอียดที่จำเป็นใน Server Logs โดยไม่เปิดเผยข้อมูลอ่อนไหว
+
+ทดสอบไฟล์ที่ถูกต้อง ไฟล์ขนาดใหญ่ ไฟล์ MIME ปลอม ไฟล์ว่าง ไฟล์เสีย ไฟล์ประเภทไม่อนุญาต และ Upload ที่ถูกยกเลิกกลางทาง
+
+---
+
+## Phase 5: UX/UI และ Customer Journey
+
+ปรับ UX โดยไม่เปลี่ยน Business Rules อย่างไร้เหตุผล
+
+### 5.1 Booking Flow
+
+ทำให้ผู้ใช้ทำรายการได้ง่ายและเข้าใจผลลัพธ์
+
+- แสดงชื่อสนาม รูป ราคา วัน เวลา และระยะเวลาที่เลือกอย่างชัดเจน
+- โหลด Availability จาก Backend
+- ปิดช่วงเวลาที่จองไม่ได้ แทนที่จะให้เลือกแล้วค่อยแจ้ง Error
+- แสดง Breakdown ของราคา ส่วนลด ค่าอุปกรณ์ และยอดสุทธิ
+- แจ้งว่ารายการอยู่ในสถานะใด ก่อนและหลังส่ง Booking Request
+- หากต้อง Login ระหว่าง Flow ให้คืนผู้ใช้กลับไปยังรายการและช่วงเวลาที่เลือกไว้
+- รักษาข้อมูลกรอกไว้เมื่อ Network Request ล้มเหลว
+- ป้องกัน Double Submit ทั้งระดับ UI และ API
+- แสดง Loading, Success, Error และ Empty States ในทุกหน้าที่มีการ Fetch หรือ Mutation
+- จัดการ Booking Conflict โดยให้ผู้ใช้เลือกช่วงเวลาใหม่ได้โดยไม่ต้องเริ่ม Flow ทั้งหมด
+
+### 5.2 Payment Flow
+
+- แสดงยอดเงินที่ Backend คำนวณและยืนยันแล้ว
+- ระบุช่องทางชำระเงินและรายละเอียดผู้รับเงินตามข้อมูลจริง
+- ให้ผู้ใช้กรอกเลขอ้างอิงที่มีต้นทางจากธุรกรรมจริง หรือให้ OCR ช่วยอ่านโดยไม่ใช้ OCR Result เป็นหลักฐานยืนยันการจ่ายเงิน
+- ห้ามสร้าง Reference จาก Timestamp เพื่อแสร้งว่าเป็น Transaction ID จริง
+- ตรวจสอบ Input ก่อน Submit และแสดง Validation Error ที่แก้ไขได้
+- แสดง Upload Progress และป้องกันการกดส่งซ้ำ
+- แยกสถานะรับสลิป ตรวจสอบสลิป อนุมัติ และปฏิเสธ
+- แสดงเหตุผลการปฏิเสธเท่าที่เปิดเผยได้ พร้อมทางแก้ไข
+- แสดง Countdown สำหรับ Hold ที่ยังมีผล โดยซิงก์กับเวลา Server
+- แสดงคำอธิบายอย่างชัดเจนว่า Upload สำเร็จไม่ได้หมายถึงชำระเงินสำเร็จ
+
+### 5.3 Navigation และ UI Consistency
+
+- ตรวจ Routing, Navigation และ Breadcrumbs ในหน้าที่จำเป็น
+- ใช้ชื่อแบรนด์ Rodhare Court ให้ตรงกันทั่วทั้งระบบ
+- ลบข้อความ Term Project หรือ Branding เก่าที่ไม่ควรอยู่ใน Production
+- จัด Visual Hierarchy ของข้อมูลสำคัญ เช่น ราคา วัน เวลา สถานะ และปุ่มหลัก
+- สร้างหรือปรับใช้ Design Tokens สำหรับสี Typography Spacing Border Radius และ Shadow
+- ทำให้ Primary, Secondary, Destructive และ Disabled Buttons แสดงผลสม่ำเสมอ
+- หลีกเลี่ยงการใช้สีเพียงอย่างเดียวสื่อความหมายของสถานะ
+- เพิ่ม Confirmation Dialog สำหรับ Action ที่ย้อนกลับไม่ได้
+- แสดง Empty State และ Error Recovery ที่นำไปสู่การแก้ปัญหาได้จริง
+- ตรวจการจัดวางในหน้าจอแคบโดยไม่ให้เกิด Horizontal Overflow ที่ไม่จำเป็น
+
+อย่าเปลี่ยนสีหรือ Layout แบบสุ่ม ต้องรักษาเอกลักษณ์เดิมของผลิตภัณฑ์และทำให้ Interface สอดคล้องกันทั้งระบบ
+
+---
+
+## Phase 6: Accessibility — WCAG 2.2 AA
+
+ตรวจสอบหน้าสาธารณะ หน้า Booking หน้า Payment หน้า Dashboard และหน้า Admin
+
+ข้อกำหนด:
+
+- Semantic HTML ที่ถูกต้อง
+- Label เชื่อมกับ Input ด้วย `htmlFor` และ `id` หรือใช้การครอบ Label อย่างถูกต้อง
+- ปุ่มและ Interactive Controls ใช้งานด้วย Keyboard ได้
+- Focus Indicator ต้องมองเห็นได้
+- Focus Order ต้องสอดคล้องกับลำดับการทำงาน
+- Contrast ตาม WCAG 2.2 AA
+- Error Message ต้องระบุปัญหาและเชื่อมโยงกับ Input
+- ใช้ `aria-live` หรือกลไกที่เหมาะสมกับสถานะที่เปลี่ยนแบบ Dynamic
+- Dialog ต้องจัดการ Focus และการปิด Dialog ได้ถูกต้อง
+- ห้ามใช้ Placeholder เป็น Label เพียงอย่างเดียว
+- Responsive Layout ต้องรองรับ Zoom และ Text Scaling
+- ตารางเวลาและสถานะต้องเข้าใจได้โดยผู้ใช้ที่มองไม่เห็นสีแตกต่างกัน
+
+ใช้ Automated Accessibility Tests ร่วมกับ Manual Keyboard Testing และทดสอบ Screen Reader ในหน้าที่สำคัญ
+
+ห้ามอ้างว่าผ่าน WCAG AA ทั้งหมดจากผล Lighthouse หรือ Automated Checker เพียงอย่างเดียว
+
+---
+
+## Phase 7: Frontend Performance และ Data Fetching
+
+ตรวจสอบการใช้ React, Query Hooks, Effects และ Rendering
+
+โดยเฉพาะ `frontend/src/pages/CreateBookingPage.tsx`:
+
+- ตรวจว่า `useQuery` และ `useEffect` ไม่ทำให้ Fetch ราคาเดียวกันซ้ำโดยไม่จำเป็น
+- ใช้ Query Key ที่สะท้อนข้อมูลที่จำเป็นต่อการคำนวณ
+- กำหนด Stale Time, Cache Invalidation และ Refetch Strategy ให้เหมาะสม
+- ป้องกัน Stale Response ที่เขียนทับข้อมูลใหม่
+- ป้องกัน Race Condition ระหว่างเปลี่ยนวัน เวลา สนาม หรือโปรโมชั่น
+- ใช้ Debounce เฉพาะ Input ที่เหมาะสม
+- ยกเลิก Request ที่ไม่จำเป็นเมื่อ Component Unmount หาก Client รองรับ
+- แสดง Loading State โดยไม่ทำให้ Layout กระโดดโดยไม่จำเป็น
+- ใช้ Image Optimization และ Lazy Loading เมื่อเหมาะสม
+- ลด JavaScript Bundle ที่ไม่จำเป็น โดยไม่เพิ่ม Complexity โดยไม่มีเหตุผล
+- ตรวจ Network Requests, Console Errors และ React Warnings
+
+หากมี Browser Automation ให้ใช้ตรวจ Performance และ UX จริงด้วย
+
+ห้ามสรุปว่า Performance ผ่านเพียงเพราะ Build สำเร็จ
+
+---
+
+## Phase 8: Database, Scalability และ Reliability
+
+ตรวจสอบ Database Query, Indexes, Transactions และ Connection Pool
+
+- เพิ่ม Index ตาม Query Patterns และตรวจ Query Plan ก่อนเพิ่ม Index จำนวนมาก
+- ตรวจ Foreign Keys, Unique Constraints, Not Null และ Referential Integrity
+- ตรวจ Connection Pool เทียบกับจำนวน Backend Instances และ Connection Limit ของฐานข้อมูล
+- ตั้ง Connection Timeout, Query Timeout และ Graceful Shutdown
+- ป้องกัน N+1 Queries และ Unbounded Queries
+- ใช้ Pagination สำหรับรายการ Booking, Payment และ Admin Reports
+- จัดการ Transaction Rollback และ Error Propagation
+- ตรวจ Background Jobs และ Expiration Jobs ภายใต้หลาย Instance
+- ป้องกัน Scheduled Jobs ทำงานซ้ำแล้วเกิดผลทางธุรกิจซ้ำ
+- ตรวจการ Restart ระหว่าง Background Job ทำงาน
+- ทำให้การยกเลิก Hold และการสร้าง Receipt ปลอดภัยเมื่องานถูก Retry
+- จัดทำ Migration ที่สามารถ Deploy อย่างมีลำดับและลด Downtime ตามความเหมาะสม
+- ห้ามรัน Destructive Migration หรือรีเซ็ต Production Database โดยไม่มีแผนสำรองและขั้นตอนที่ปลอดภัย
+
+ใช้ Time Zone อย่างสม่ำเสมอ โดยระบุให้ชัดว่าฐานข้อมูลเก็บ Instant แบบ UTC หรือรูปแบบอื่น และแปลงเป็นเวลาท้องถิ่นเมื่อแสดงผล
+
+---
+
+## Phase 9: Logging, Monitoring และ Error Handling
+
+- ใช้ Structured Logging สำหรับ Booking, Payment และ Authentication Events
+- ห้าม Log Password, JWT, Cookies, API Keys, Signed URLs หรือข้อมูลส่วนบุคคลเกินจำเป็น
+- ใช้ Correlation ID หรือ Request ID หากเหมาะสม
+- แยก Client Errors, Validation Errors, Business Conflicts และ Internal Errors
+- ส่ง Error Response ในรูปแบบที่สม่ำเสมอ
+- ห้ามแสดง Stack Trace ให้ผู้ใช้ทั่วไป
+- เพิ่ม Metrics สำหรับ Booking Success Rate, Payment Pending, Payment Rejection, Booking Conflict และ API Failure
+- สร้าง Health Checks ที่ไม่เปิดเผย Secret หรือรายละเอียดภายใน
+- จัดทำ Alert สำหรับข้อผิดพลาดทางธุรกิจที่สำคัญ หาก Infrastructure รองรับ
+- ตรวจ Logs และ Error Paths เมื่อ Provider หรือ Database ใช้งานไม่ได้
+
+กรณี Payment Provider ล่มหรือไม่สามารถยืนยันธุรกรรมได้ ให้ระบบ Fail Safely และคงสถานะที่ถูกต้อง ห้ามเปลี่ยนรายการเป็น Paid เพียงเพื่อให้ Flow ดำเนินต่อ
+
+---
+
+## Phase 10: Brand Consistency และ Maintainability
+
+ค้นหา Branding เก่าทั้ง Frontend และ Backend Responses ที่มีไว้แสดงผล
+
+- ใช้ชื่อ Rodhare Court ในตำแหน่งที่ผู้ใช้มองเห็น
+- ลบข้อความ Development-only และข้อความเกี่ยวกับ Term Project ที่ไม่ควรอยู่ใน Production
+- รวม Brand Name และ Configuration ที่ซ้ำกันไว้ในแหล่งข้อมูลกลาง
+- แก้ Duplication เฉพาะที่มีประโยชน์ต่อการดูแลรักษา
+- รักษา Code Style, Type Safety และ Naming Conventions
+- ไม่ Refactor ทุกอย่างพร้อมกันโดยไม่มีความจำเป็น
+- แยก Business Logic, Persistence และ Presentation ตามโครงสร้าง Architecture เดิม
+
+---
+
+## Phase 11: Automated Test Suite — บังคับทำ
+
+สร้างหรือปรับปรุง Tests ให้ครอบคลุม Critical Paths ทั้งหมด
+
+### Unit Tests
+
+ทดสอบ:
+
+- Booking Price Calculation
+- Promotion and Discount Rules
+- Booking Time Validation
+- Payment State Transitions
+- Amount and Currency Validation
+- Reference Validation
+- Authorization Decisions
+- Receipt Eligibility
+- Hold Expiration Rules
+
+### Integration Tests
+
+ทดสอบ:
+
+- Database Transactions
+- Booking Conflict Handling
+- Payment Submission and Approval
+- Receipt Generation
+- Storage Access Control
+- Authentication and Authorization
+- CSRF Protections
+- Idempotent Operations
+- Rollback Behavior
+- Error Paths เมื่อ Dependency ใช้งานไม่ได้
+
+### API Security Tests
+
+ตรวจว่า:
+
+- Customer แก้ข้อมูล Booking ของผู้อื่นไม่ได้
+- Customer อ่านสลิปของผู้อื่นไม่ได้
+- Customer ปลอมยอดเงินหรือสถานะ Paid ไม่ได้
+- Unauthorized Users เรียก Admin APIs ไม่ได้
+- Invalid, Expired หรือ Tampered Tokens ถูกปฏิเสธ
+- Cross-Origin Requests ไม่สามารถดำเนินการที่ไม่ได้รับอนุญาต
+- Upload ที่ไม่ถูกต้องถูก Reject
+- Request ที่ถูกส่งซ้ำไม่สร้างผลทางธุรกิจซ้ำ
+
+### Concurrency Tests
+
+สร้าง Concurrent Requests บน Database ที่ใช้ทดสอบจริง
+
+ตรวจผลลัพธ์ทั้ง HTTP Responses, Booking Records, Payment Records, Receipts และสถานะสุดท้ายในฐานข้อมูล
+
+จำนวน Booking ที่ชนกันต้องไม่เกินกติกาที่ระบบอนุญาต
+
+### End-to-End Tests
+
+ครอบคลุม Journey ต่อไปนี้:
+
+1. ลูกค้าค้นหาสนามและเลือกช่วงเวลาว่าง
+2. ลูกค้าสร้าง Booking สำเร็จ
+3. ลูกค้าดำเนินการส่งหลักฐานการชำระเงิน
+4. Payment ถูกส่งเข้าสู่กระบวนการตรวจสอบ
+5. เจ้าหน้าที่ที่ได้รับอนุญาตอนุมัติหรือปฏิเสธ
+6. ระบบสร้าง Receipt เฉพาะเมื่อเข้าเงื่อนไข
+7. Booking ที่หมดเวลาถือครองกลับมาว่างตาม Business Rules
+8. การยกเลิกและการส่งคำขอซ้ำไม่สร้างข้อมูลผิดพลาด
+
+ใช้ Test Database หรือ Test Environment เท่านั้น ห้ามยิง Test ที่สร้าง แก้ไข หรือลบข้อมูลบน Production
+
+หากไม่มี Test Infrastructure ให้จัดเตรียมส่วนที่จำเป็นและอธิบายคำสั่งรัน โดยห้ามอ้างว่าทดสอบผ่านหากยังไม่ได้รัน
+
+---
+
+## Phase 12: Build, Lint, Type Check และ Regression Verification
+
+หลังแก้ไข ให้รันคำสั่งจริงที่มีอยู่ใน Project Configuration
+
+ตรวจสอบอย่างน้อย:
+
+- Install Dependencies ตาม Lockfile
+- Lint
+- Type Check
+- Unit Tests
+- Integration Tests
+- Production Build
+- E2E Tests หาก Environment รองรับ
+- Database Migration Validation
+- Security Dependency Audit
+
+ห้ามสมมติชื่อ Script หากยังไม่ได้ตรวจ `package.json`
+
+ห้ามแก้ด้วยการปิด Rule หรือเปลี่ยน Test ให้ยอมรับพฤติกรรมที่ผิด
+
+หาก Test ใดล้มเหลว ให้ตรวจ Root Cause และแก้จนผ่านเท่าที่ทำได้ หรือระบุอย่างชัดเจนว่าไม่ผ่านเพราะอะไร
+
+ให้ตรวจสอบ Regression ในฟีเจอร์ที่มีอยู่เดิม เช่น Login, Registration, Court Listings, Booking, Payment, Customer History, Admin Management และ Receipt Generation
+
+---
+
+## Phase 13: Definition of Done
+
+ถือว่างานส่วนหนึ่งเสร็จเมื่อครบเงื่อนไขต่อไปนี้:
+
+- มีการแก้ไข Source Code จริง
+- มี Tests ที่ครอบคลุมพฤติกรรมที่แก้ไข
+- Tests ที่เกี่ยวข้องผ่าน หรือมีข้อจำกัดที่พิสูจน์ได้และระบุชัดเจน
+- ไม่มี Secret ใหม่ถูกเพิ่มลง Repository
+- ไม่มี Fake Payment Success หรือ Fake Transaction Reference
+- Authorization และ Validation ถูกบังคับฝั่ง Backend
+- การจองพร้อมกันได้รับการตรวจสอบด้วย Integration หรือ Concurrency Tests
+- Payment State Transitions และ Receipt Generation มีการควบคุมที่ถูกต้อง
+- Storage Permissions ได้รับการตรวจสอบ
+- UI มี Error, Loading, Empty และ Success States ตามความเหมาะสม
+- ไม่มี Console Errors หรือ Type Errors ที่เกิดจากการแก้ไขใหม่โดยไม่ทราบสาเหตุ
+- Build และ Lint ผ่าน หรือระบุข้อจำกัดพร้อมผลลัพธ์จริง
+- มีเอกสาร Environment Variables, Migration และ Deployment Changes
+- มีรายการ Actions ที่ต้องทำบน Dashboard ของผู้ให้บริการ ซึ่งไม่สามารถแก้ผ่าน Source Code ได้
+
+อย่าใช้คำว่า Production Ready หากยังมี Critical Findings ที่เปิดอยู่ หรือยังไม่ได้ทำการทดสอบด้านความปลอดภัยที่จำเป็น
+
+---
+
+## รูปแบบรายงานหลังจากลงมือแก้เสร็จ
+
+สรุปผลในรูปแบบต่อไปนี้:
+
+### 1. Executive Summary
+ระบุสภาพระบบก่อนและหลังการแก้ไข พร้อมข้อจำกัดที่เหลือจริง
+
+### 2. Files Changed
+แสดงไฟล์ที่แก้ไข เพิ่ม ลบ หรือย้าย พร้อมเหตุผลโดยย่อ
+
+### 3. Findings Resolved
+สำหรับแต่ละข้อ ระบุ:
+
+- Finding ID และ Severity
+- Root Cause
+- สิ่งที่แก้ไขจริง
+- วิธีตรวจสอบผลลัพธ์
+
+### 4. Database and Deployment Changes
+ระบุ Migration, Index, Constraint, Environment Variables, Storage Policies และขั้นตอน Deploy ที่ต้องดำเนินการ
+
+### 5. Tests Executed
+แสดงคำสั่งที่รันจริง จำนวน Tests ที่ผ่าน/ไม่ผ่าน และ Failure Details
+
+### 6. Remaining Risks
+รายการที่ยังแก้ไม่ได้ เพราะต้องใช้ Credentials, Dashboard Access, External Payment Provider หรือ Production Infrastructure
+
+### 7. Manual Actions Required
+ระบุสิ่งที่เจ้าของระบบต้องทำเอง เช่น Rotate Credentials, เปลี่ยน Bucket เป็น Private, ตั้งค่า Secret และตรวจการเปิดเผยข้อมูลเดิม
+
+### 8. Final Go/No-Go
+สรุปว่าแต่ละส่วนผ่านเกณฑ์ใดบ้าง และระบบยังมีข้อขัดขวางการ Deploy อะไรอยู่
+
+---
+
+# คำสั่งเริ่มต้น
+
+เริ่มจากตรวจ Repository ของ Rodhare Court ทั้งหมด ระบุ Tech Stack และคำสั่งที่ใช้ตรวจสอบได้จริง จากนั้นจัดลำดับ Findings ตาม Severity และแก้ไข Source Code อย่างต่อเนื่อง
+
+ให้เริ่มจาก P0 Security Issues ก่อน ตามด้วย Payment Integrity, Authentication, Booking Concurrency, Backend Validation, UX/UI, Accessibility และ Performance
+
+**อย่าหยุดที่รายงาน อย่าหยุดที่แผนงาน และอย่าส่งเพียงตัวอย่างโค้ด ให้ดำเนินการแก้ไขไฟล์จริง รัน Tests และส่งสรุปผลที่มีหลักฐานตรวจสอบได้**
+
+หากส่วนใดต้องใช้การตั้งค่าจาก External Service ให้ทำ Code Changes และ Automated Tests ที่ทำได้ก่อน พร้อมระบุขั้นตอนที่ต้องทำภายนอกอย่างชัดเจน โดยห้ามจำลองว่าการตั้งค่านั้นเสร็จแล้ว

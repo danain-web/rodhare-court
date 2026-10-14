@@ -75,12 +75,24 @@ describe('Payment demo mode', () => {
     expect(res.body.data.result).toBe('VERIFIED');
   });
 
-  it('สลิปภาพไม่ชัด → เข้าคิวพนักงาน (ไม่อนุมัติเอง)', async () => {
+  it('สลิปภาพไม่ชัด → ยังอนุมัติอัตโนมัติ (โหมดสาธิตไม่ต้องรอพนักงาน)', async () => {
     const { bookingId, finalAmount } = await book(futureDate(17), '14:00', '15:00');
     const res = await sendSlip(bookingId, finalAmount, VALID_PNG); // ไฟล์เล็ก/ความละเอียดต่ำ
-    expect(res.body.data.result).toBe('MANUAL_REVIEW');
+    expect(res.body.data.result).toBe('VERIFIED');
+    const readable = res.body.data.checks.find((c: any) => c.code === 'READABLE');
+    expect(readable.passed).toBe(false); // ยังแสดงผลตรวจความชัดเป็นข้อมูลประกอบ
     const booking = await pool.query('SELECT status FROM bookings WHERE booking_id = $1', [bookingId]);
-    expect(booking.rows[0].status).toBe('PENDING_PAYMENT');
+    expect(booking.rows[0].status).toBe('CONFIRMED');
+  });
+
+  it('ไม่ได้ตั้ง PAYMENT_DEMO_MODE → โหมดสาธิตเปิดเป็นค่าเริ่มต้น', () => {
+    const script = `require('./src/config/env').config.paymentDemoMode`;
+    const out = require('child_process').execFileSync(process.execPath, ['--import', 'tsx', '-p', script], {
+      cwd: require('path').resolve(__dirname, '..'),
+      env: { ...process.env, PAYMENT_DEMO_MODE: '' },
+      encoding: 'utf8',
+    });
+    expect(out.trim()).toBe('true');
   });
 
   it('ยอดไม่ตรง → ปฏิเสธ แม้อยู่ในโหมดสาธิต', async () => {
