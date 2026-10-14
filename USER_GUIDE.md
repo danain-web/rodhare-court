@@ -22,7 +22,7 @@
 - บัญชี **Supabase** (ฟรี) — https://supabase.com
 - อินเทอร์เน็ต (ฐานข้อมูลอยู่บน Supabase, ฟอนต์/รูปสนาม/QR โหลดจากเว็บภายนอก)
 
-> ไม่ต้องติดตั้ง Oracle แล้ว — ไฟล์ของเวอร์ชัน Oracle เดิมย้ายไปเก็บไว้ที่โฟลเดอร์ `legacy-oracle/` เพื่ออ้างอิงเท่านั้น **ไม่ต้องใช้**
+> ไม่ต้องติดตั้ง Oracle — ระบบใช้ PostgreSQL (Supabase) เท่านั้น
 
 ## 1.2 สร้างโปรเจกต์ Supabase
 1. เข้า https://supabase.com/dashboard → **New project**
