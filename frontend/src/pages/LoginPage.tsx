@@ -2,11 +2,14 @@ import React, { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { safeRedirectPath } from '../utils/redirect';
 import { useAuth } from '../context/AuthContext';
-import { loginApi } from '../services/auth';
+import { googleLoginApi, loginApi } from '../services/auth';
 import { BrandMark } from '../components/Navbar';
+import { GoogleSignInButton } from '../components/GoogleSignInButton';
 import { Alert } from '../components/ui';
 import { Briefcase, CalendarCheck, KeyRound, Loader2, ShieldCheck, Timer, UserCheck, UserCog, Users } from 'lucide-react';
 import { BRAND_NAME } from '../config/brand';
+
+const GOOGLE_ENABLED = !!import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
 // หน้าเข้าสู่ระบบ (BR1) — ออกแบบใหม่ตาม Design System ของ Prototype
 export const LoginPage: React.FC = () => {
@@ -38,6 +41,20 @@ export const LoginPage: React.FC = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     handleLogin(identifier, password);
+  };
+
+  const handleGoogle = async (credential: string) => {
+    setErrorMessage(null);
+    setIsSubmitting(true);
+    try {
+      const data = await googleLoginApi(credential);
+      login(data.user);
+      navigate(redirectTo ?? '/dashboard', { replace: true });
+    } catch (err: any) {
+      setErrorMessage(err.response?.data?.message || err.message || 'เข้าสู่ระบบด้วย Google ไม่สำเร็จ');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const fillAndLogin = (user: string, pass: string) => {
@@ -124,6 +141,15 @@ export const LoginPage: React.FC = () => {
                 </>
               )}
             </button>
+            {GOOGLE_ENABLED && (
+              <>
+                <div className="flex items-center gap-3 text-[11px] text-slate-400">
+                  <div className="h-px flex-1 bg-slate-200" /> หรือ <div className="h-px flex-1 bg-slate-200" />
+                </div>
+                <GoogleSignInButton onCredential={handleGoogle} />
+                <p className="text-center text-[11px] text-slate-500">อีเมล @kkumail.com จะได้สิทธิ์ส่วนลดนักศึกษาอัตโนมัติ</p>
+              </>
+            )}
             <div className="text-center text-sm text-slate-600">
               ยังไม่มีบัญชี?{' '}
               <Link to="/register" className="font-semibold text-forest-700 hover:underline">

@@ -1,13 +1,30 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { linkGoogleApi } from '../services/auth';
+import { GoogleSignInButton } from '../components/GoogleSignInButton';
 import { CustomerLayout } from '../components/layout/CustomerLayout';
 import { StaffLayout } from '../components/layout/StaffLayout';
 import { PageHeader, formatDateTime } from '../components/ui';
-import { Calendar, IdCard, Key, Lock, Mail, Phone, ShieldCheck } from 'lucide-react';
+import { Calendar, CheckCircle2, IdCard, Key, Link2, Lock, Mail, Phone, ShieldCheck } from 'lucide-react';
+
+const GOOGLE_ENABLED = !!import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
 // โปรไฟล์ผู้ใช้ (ไม่มี Prototype — ออกแบบตาม Design System เดียวกัน)
 export const ProfilePage: React.FC = () => {
-  const { user, hasRole } = useAuth();
+  const { user, hasRole, refreshUser } = useAuth();
+  const [linkMsg, setLinkMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const handleLink = async (credential: string) => {
+    setLinkMsg(null);
+    try {
+      await linkGoogleApi(credential);
+      await refreshUser();
+      setLinkMsg({ ok: true, text: 'เชื่อมบัญชี Google เรียบร้อยแล้ว' });
+    } catch (err: any) {
+      setLinkMsg({ ok: false, text: err.response?.data?.message || err.message || 'เชื่อมบัญชี Google ไม่สำเร็จ' });
+    }
+  };
+
   const Layout = hasRole('STAFF') || hasRole('ADMIN') || hasRole('EXECUTIVE') ? StaffLayout : CustomerLayout;
 
   return (
@@ -57,6 +74,28 @@ export const ProfilePage: React.FC = () => {
               </div>
             ))}
           </div>
+
+          {/* เชื่อมบัญชี Google: ต้องล็อกอินด้วยรหัสผ่านก่อน จึงพิสูจน์ได้ว่าเป็นเจ้าของบัญชีทั้งสองฝั่ง (ป้องกันผู้อื่นยึดบัญชีผ่านอีเมลที่ไม่ได้ยืนยัน) */}
+          {(user?.googleLinked || GOOGLE_ENABLED) && (
+            <div className="border-t border-slate-100 pt-4">
+              <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-slate-600">
+                <Link2 className="h-4 w-4" /> บัญชี Google
+              </div>
+              {user?.googleLinked ? (
+                <div className="flex items-center gap-2 rounded-xl bg-mint-50 p-3 text-xs text-forest-800">
+                  <CheckCircle2 className="h-4 w-4 shrink-0" /> เชื่อมกับบัญชี Google แล้ว เข้าสู่ระบบด้วย Google ได้
+                </div>
+              ) : (
+                <div className="space-y-3 rounded-xl bg-panel p-3">
+                  <p className="text-xs text-slate-600">เชื่อมบัญชี Google เพื่อเข้าสู่ระบบด้วย Google ได้โดยไม่ต้องกรอกรหัสผ่าน (รหัสผ่านเดิมยังใช้ได้ตามปกติ)</p>
+                  <GoogleSignInButton onCredential={handleLink} text="continue_with" />
+                </div>
+              )}
+              {linkMsg && (
+                <div className={`mt-2 text-xs ${linkMsg.ok ? 'text-forest-700' : 'text-rose-600'}`}>{linkMsg.text}</div>
+              )}
+            </div>
+          )}
 
           {/* Session JWT อยู่ใน httpOnly Cookie — JavaScript อ่านไม่ได้ (ป้องกัน XSS) จึงไม่แสดง token บนหน้า */}
           <div className="border-t border-slate-100 pt-4">

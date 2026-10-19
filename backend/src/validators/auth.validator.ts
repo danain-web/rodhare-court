@@ -21,6 +21,11 @@ export const registerSchema = z.object({
   memberTypeId: z.number().int().positive().optional(),
 });
 
+// ID token (JWT) จาก Google Identity Services — ยาวหลายร้อยตัวอักษร
+export const googleCredentialSchema = z.object({
+  credential: z.string().trim().min(20, 'ไม่พบข้อมูลยืนยันจาก Google').max(4096),
+});
+
 export const availabilitySchema = z.object({
   username: z.string().trim().max(50).optional(),
   email: z.string().trim().max(100).optional(),

@@ -2,8 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
-import { checkAvailabilityApi, getMemberTypesPublicApi, registerApi } from '../services/auth';
+import { checkAvailabilityApi, getMemberTypesPublicApi, googleLoginApi, registerApi } from '../services/auth';
 import { BrandMark } from '../components/Navbar';
+import { GoogleSignInButton } from '../components/GoogleSignInButton';
 import { Alert } from '../components/ui';
 import { CheckCircle2, GraduationCap, Loader2, UserPlus, Users, Briefcase, XCircle } from 'lucide-react';
 
@@ -135,6 +136,17 @@ export const RegisterPage: React.FC = () => {
     }
   };
 
+  const handleGoogle = async (credential: string) => {
+    setErrorMessage(null);
+    try {
+      const data = await googleLoginApi(credential);
+      login(data.user);
+      navigate('/courts');
+    } catch (err: any) {
+      setErrorMessage(err.response?.data?.message || err.message || 'สมัครด้วย Google ไม่สำเร็จ');
+    }
+  };
+
   const blocked = isSubmitting || usernameCheck.state === 'taken' || emailCheck.state === 'taken' || passwordMismatch || passwordTooShort;
 
   return (
@@ -149,6 +161,18 @@ export const RegisterPage: React.FC = () => {
 
         <form onSubmit={handleSubmit} className="card space-y-5 p-6">
           {errorMessage && <Alert tone="error" title={errorMessage} onClose={() => setErrorMessage(null)} />}
+
+          {import.meta.env.VITE_GOOGLE_CLIENT_ID && (
+            <div className="space-y-3">
+              <GoogleSignInButton onCredential={handleGoogle} text="signup_with" />
+              <p className="text-center text-[11px] text-slate-500">
+                สมัครด้วยบัญชี Google ได้ทันที ไม่ต้องตั้งรหัสผ่าน · อีเมล @kkumail.com ได้สิทธิ์ส่วนลดนักศึกษาอัตโนมัติ
+              </p>
+              <div className="flex items-center gap-3 text-[11px] text-slate-400">
+                <div className="h-px flex-1 bg-slate-200" /> หรือกรอกข้อมูลสมัครด้วยตนเอง <div className="h-px flex-1 bg-slate-200" />
+              </div>
+            </div>
+          )}
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div>

@@ -14,6 +14,7 @@ export interface UserDTO {
   memberTypeId: number;
   roles: string[];
   permissions?: string[];
+  googleLinked?: boolean;
   isActive: boolean;
   createdAt: string;
 }

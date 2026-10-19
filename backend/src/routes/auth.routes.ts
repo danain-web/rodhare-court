@@ -10,6 +10,8 @@ const authController = new AuthController();
 
 router.post('/login',    authLimiter, authController.login);
 router.post('/register', authLimiter, authController.register);
+router.post('/google',      authLimiter, authController.googleLogin);
+router.post('/google/link', requireAuth, authLimiter, authController.linkGoogle);
 router.get('/check-availability', authController.checkAvailability);
 router.get('/member-types', authController.getMemberTypes);
 router.post('/logout', requireAuth, authController.logout);

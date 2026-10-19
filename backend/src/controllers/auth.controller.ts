@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { AuthService } from '../services/auth.service';
-import { availabilitySchema, loginSchema, registerSchema } from '../validators/auth.validator';
+import { availabilitySchema, googleCredentialSchema, loginSchema, registerSchema } from '../validators/auth.validator';
 import { sendSuccess } from '../utils/response';
 import { currentUser } from './helpers';
 import { COOKIE_NAME, cookieOptions } from '../utils/jwt';
@@ -29,6 +29,21 @@ export class AuthController {
     const result = await this.authService.register(input, req.ip || req.socket.remoteAddress, req.get('User-Agent'));
     res.cookie(COOKIE_NAME, result.token, cookieOptions());
     return sendSuccess(res, { user: result.user }, 'สมัครสมาชิกสำเร็จ', 201);
+  };
+
+  // เข้าสู่ระบบ/สมัครด้วย Google — ตั้ง httpOnly Cookie เหมือนการเข้าสู่ระบบด้วยรหัสผ่านทุกประการ
+  googleLogin = async (req: Request, res: Response) => {
+    const { credential } = googleCredentialSchema.parse(req.body);
+    const result = await this.authService.loginWithGoogle(credential, req.ip || req.socket.remoteAddress, req.get('User-Agent'));
+    res.cookie(COOKIE_NAME, result.token, cookieOptions());
+    return sendSuccess(res, { user: result.user, isNewAccount: result.isNewAccount }, 'เข้าสู่ระบบด้วย Google สำเร็จ', result.isNewAccount ? 201 : 200);
+  };
+
+  // เชื่อมบัญชี Google เข้ากับบัญชีที่ล็อกอินอยู่ (หน้าโปรไฟล์)
+  linkGoogle = async (req: Request, res: Response) => {
+    const user = currentUser(req);
+    const { credential } = googleCredentialSchema.parse(req.body);
+    return sendSuccess(res, await this.authService.linkGoogle(user.userId, credential, req.ip), 'เชื่อมบัญชี Google สำเร็จ');
   };
 
   checkAvailability = async (req: Request, res: Response) => {

@@ -41,6 +41,9 @@ services:
       - key: PAYMENT_BANK_ACCOUNT_NO
         sync: false
       # แจ้งเตือนอีเมล (Resend) + ตัวตั้งเวลาภายนอก — ดู docs/NOTIFICATIONS_SETUP.md
+      # เข้าสู่ระบบด้วย Google (ค่าสาธารณะ ไม่ใช่ความลับ) — ดู docs/GOOGLE_LOGIN_SETUP.md
+      - key: GOOGLE_CLIENT_ID
+        sync: false
       - key: RESEND_API_KEY
         sync: false
       - key: EMAIL_FROM

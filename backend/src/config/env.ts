@@ -54,6 +54,10 @@ export const config = {
     resendApiKey: env('RESEND_API_KEY'),
     from:         env('EMAIL_FROM'), // เช่น "Rodhare Court <onboarding@resend.dev>"
   },
+  // Google OAuth Client ID (ค่าสาธารณะ ไม่ใช่ความลับ) — ใช้ตรวจว่า ID token ถูกออกให้แอปนี้ · ไม่ตั้ง = ปิดการเข้าสู่ระบบด้วย Google
+  google: {
+    clientId: env('GOOGLE_CLIENT_ID'),
+  },
   // ความลับของ endpoint /api/internal/cron/tick ที่ตัวตั้งเวลาภายนอกเรียก (ไม่ตั้ง = ปิด endpoint)
   cronSecret: env('CRON_SECRET'),
 

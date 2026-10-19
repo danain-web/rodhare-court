@@ -2,7 +2,8 @@ import { DbConnection, firstInsertId } from '../config/db';
 import { UserDTO } from '../types';
 
 export interface UserRecord extends UserDTO {
-  passwordHash: string;
+  passwordHash: string | null; // null = บัญชีที่สมัครผ่าน Google (ไม่มีรหัสผ่าน)
+  googleSub: string | null;
 }
 
 // =====================================================================
@@ -10,7 +11,7 @@ export interface UserRecord extends UserDTO {
 // PostgreSQL: ใช้ COALESCE แทน NVL, lowercase column names
 // =====================================================================
 const USER_SELECT = `
-  SELECT u.user_id, u.username, u.email, u.password_hash, u.first_name, u.last_name, u.phone, u.member_type_id,
+  SELECT u.user_id, u.username, u.email, u.password_hash, u.google_sub, u.first_name, u.last_name, u.phone, u.member_type_id,
          COALESCE(m.display_name, m.type_name) AS member_type_name, u.is_active, u.created_at, r.role_name
     FROM users u
     JOIN member_types m ON m.member_type_id = u.member_type_id
@@ -28,7 +29,9 @@ const mapUser = (rows: any[]): UserRecord | null => {
     userId: first.user_id,
     username: first.username,
     email: first.email,
-    passwordHash: first.password_hash,
+    passwordHash: first.password_hash ?? null,
+    googleSub: first.google_sub ?? null,
+    googleLinked: !!first.google_sub,
     firstName: first.first_name,
     lastName: first.last_name,
     phone: first.phone ?? undefined,
@@ -56,6 +59,33 @@ export class UserRepository {
   async findById(conn: DbConnection, userId: number): Promise<UserRecord | null> {
     const result = await conn.query(`${USER_SELECT} WHERE u.user_id = $1`, [userId]);
     return mapUser(result.rows);
+  }
+
+  async findByGoogleSub(conn: DbConnection, googleSub: string): Promise<UserRecord | null> {
+    const result = await conn.query(`${USER_SELECT} WHERE u.google_sub = $1`, [googleSub]);
+    return mapUser(result.rows);
+  }
+
+  async findByEmail(conn: DbConnection, email: string): Promise<UserRecord | null> {
+    const result = await conn.query(`${USER_SELECT} WHERE LOWER(u.email) = LOWER($1)`, [email.trim()]);
+    return mapUser(result.rows);
+  }
+
+  // ประเภทสมาชิกจากโดเมนอีเมล (ตาราง member_type_email_domains) — ไม่พบ = null (ใช้ค่าเริ่มต้น บุคคลภายนอก)
+  async getMemberTypeIdForEmailDomain(conn: DbConnection, email: string): Promise<number | null> {
+    const domain = email.slice(email.lastIndexOf('@') + 1).toLowerCase();
+    const res = await conn.query<{ member_type_id: number }>(`SELECT member_type_id FROM member_type_email_domains WHERE domain = $1`, [domain]);
+    return res.rows[0]?.member_type_id ?? null;
+  }
+
+  // ผูกบัญชี Google เข้ากับผู้ใช้ — ถ้า google_sub นี้ถูกใช้โดยผู้ใช้อื่นแล้ว unique index จะ throw (code 23505)
+  async linkGoogleSub(conn: DbConnection, userId: number, googleSub: string): Promise<void> {
+    await conn.query(`UPDATE users SET google_sub = $1, updated_at = NOW() WHERE user_id = $2`, [googleSub, userId]);
+  }
+
+  async usernameExists(conn: DbConnection, username: string): Promise<boolean> {
+    const res = await conn.query(`SELECT 1 FROM users WHERE LOWER(username) = LOWER($1)`, [username]);
+    return res.rows.length > 0;
   }
 
   async existsUsernameOrEmail(conn: DbConnection, username: string, email: string): Promise<{ username: boolean; email: boolean }> {
@@ -112,7 +142,8 @@ export class UserRepository {
     userData: {
       username: string;
       email: string;
-      passwordHash: string;
+      passwordHash: string | null;
+      googleSub?: string;
       firstName: string;
       lastName: string;
       phone?: string;
@@ -121,8 +152,8 @@ export class UserRepository {
     }
   ): Promise<number> {
     const result = await conn.query(
-      `INSERT INTO users (username, email, password_hash, first_name, last_name, phone, member_type_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO users (username, email, password_hash, first_name, last_name, phone, member_type_id, google_sub)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING user_id`,
       [
         userData.username,
@@ -132,6 +163,7 @@ export class UserRepository {
         userData.lastName,
         userData.phone || null,
         userData.memberTypeId ?? null,
+        userData.googleSub ?? null,
       ]
     );
     const userId = firstInsertId(result.rows, 'user_id');

@@ -19,6 +19,18 @@ export const registerApi = async (data: {
   return response.data.data;
 };
 
+// เข้าสู่ระบบ/สมัครด้วย Google — credential คือ ID token จาก Google Identity Services
+export const googleLoginApi = async (credential: string) => {
+  const response = await api.post('/auth/google', { credential });
+  return response.data.data as { user: UserDTO; isNewAccount: boolean };
+};
+
+// เชื่อมบัญชี Google เข้ากับบัญชีที่ล็อกอินอยู่ (หน้าโปรไฟล์)
+export const linkGoogleApi = async (credential: string): Promise<UserDTO> => {
+  const response = await api.post('/auth/google/link', { credential });
+  return response.data.data;
+};
+
 // ตรวจชื่อผู้ใช้/อีเมลซ้ำ (ไม่สนตัวพิมพ์เล็ก/ใหญ่)
 export const checkAvailabilityApi = async (params: {
   username?: string;
