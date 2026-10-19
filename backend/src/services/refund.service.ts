@@ -17,13 +17,14 @@ import { RefundRequestDTO, UpdateBookingInput, CancelRefundPreview } from '../ty
 import { BookingDTO } from '../types/booking';
 import { AppError } from '../utils/appError';
 import { combineDateTime, hoursBetween } from '../utils/datetime';
-import { hasAnyRole, round2 } from '../utils/params';
+import { round2 } from '../utils/params';
+import { PermissionService } from './permission.service';
 
 const CANCELLABLE = ['PENDING_PAYMENT', 'PAYMENT_VERIFIED', 'CONFIRMED'];
-const STAFF_ROLES = ['STAFF', 'ADMIN'];
 
 export class RefundService {
   private refundRepository = new RefundRepository();
+  private permissionService = new PermissionService();
   private bookingRepository = new BookingRepository();
   private paymentRepository = new PaymentRepository();
   private equipmentRepository = new EquipmentRepository();
@@ -91,8 +92,8 @@ export class RefundService {
     };
   }
 
-  private assertOwnerOrStaff(booking: LockedBooking, userId: number, roles: string[]): void {
-    if (!hasAnyRole(roles, ...STAFF_ROLES) && booking.userId !== userId) {
+  private async assertOwnerOrStaff(booking: LockedBooking, userId: number, roles: string[]): Promise<void> {
+    if (booking.userId !== userId && !(await this.permissionService.hasPermission(roles, 'refund.review'))) {
       throw AppError.forbidden('ทำรายการได้เฉพาะการจองของตนเองเท่านั้น');
     }
   }
@@ -102,7 +103,7 @@ export class RefundService {
     return withConnection(async (conn) => {
       const booking = await this.bookingRepository.lockBooking(conn, bookingId);
       if (!booking) throw AppError.notFound('ไม่พบการจอง');
-      this.assertOwnerOrStaff(booking, userId, roles);
+      await this.assertOwnerOrStaff(booking, userId, roles);
       const detail = await this.bookingRepository.getBookingById(conn, bookingId);
       return this.buildPreview(conn, booking, detail?.courtName);
     });
@@ -120,10 +121,11 @@ export class RefundService {
     return withTransaction(async (conn) => {
       const booking = await this.bookingRepository.lockBooking(conn, bookingId);
       if (!booking) throw AppError.notFound('ไม่พบการจอง');
-      this.assertOwnerOrStaff(booking, userId, roles);
+      await this.assertOwnerOrStaff(booking, userId, roles);
 
       if (booking.status === 'CANCELLED' || booking.status === 'REFUNDED') throw AppError.conflict('การจองนี้ถูกยกเลิกไปแล้ว');
       if (booking.status === 'EXPIRED') throw AppError.badRequest('การจองนี้หมดอายุแล้ว ไม่ต้องยกเลิกซ้ำ');
+      if (booking.status === 'NO_SHOW') throw AppError.badRequest('การจองนี้ไม่ได้มาใช้บริการตามเวลา ไม่สามารถยกเลิกหรือขอคืนเงินได้');
 
       const preview = await this.buildPreview(conn, booking);
       if (!CANCELLABLE.includes(booking.status) || preview.hoursUntilStart <= 0) {

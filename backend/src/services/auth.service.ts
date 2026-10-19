@@ -5,6 +5,7 @@ import { SessionRepository } from '../repositories/session.repository';
 import { insertAudit } from '../repositories/shared.repository';
 import { comparePassword, hashPassword } from '../utils/password';
 import { generateToken } from '../utils/jwt';
+import { PermissionService } from './permission.service';
 import { AppError } from '../utils/appError';
 import { AuthUserPayload, UserDTO } from '../types';
 import { LoginInput, RegisterInput } from '../validators/auth.validator';
@@ -19,6 +20,12 @@ const toDto = (user: UserRecord): UserDTO => {
 export class AuthService {
   private userRepository = new UserRepository();
   private sessionRepository = new SessionRepository();
+  private permissionService = new PermissionService();
+
+  // แนบ permission ที่ role ของผู้ใช้มีตอนนี้ ให้ frontend ซ่อน/แสดงเมนู (backend ยังเป็นผู้ตรวจจริงทุก request)
+  private async toDtoWithPermissions(user: UserRecord): Promise<UserDTO> {
+    return { ...toDto(user), permissions: await this.permissionService.listForRoles(user.roles) };
+  }
 
   async login(input: LoginInput, ipAddress?: string, userAgent?: string): Promise<{ token: string; user: UserDTO }> {
     const user = await withConnection((conn) => this.userRepository.findByIdentifier(conn, input.identifier));
@@ -65,7 +72,7 @@ export class AuthService {
       });
     }, user.userId);
 
-    return { token, user: toDto(user) };
+    return { token, user: await this.toDtoWithPermissions(user) };
   }
 
   // หน้าสมัครสมาชิก: ตรวจชื่อผู้ใช้/อีเมลซ้ำระหว่างพิมพ์ (ไม่สนตัวพิมพ์เล็ก/ใหญ่)
@@ -134,6 +141,6 @@ export class AuthService {
   async getUserProfile(userId: number): Promise<UserDTO> {
     const user = await withConnection((conn) => this.userRepository.findById(conn, userId));
     if (!user) throw AppError.notFound('ไม่พบผู้ใช้');
-    return toDto(user);
+    return this.toDtoWithPermissions(user);
   }
 }

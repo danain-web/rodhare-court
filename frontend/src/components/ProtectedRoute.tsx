@@ -6,11 +6,11 @@ import { ShieldAlert, Loader2 } from 'lucide-react';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  allowedRoles?: string[];
+  permission?: string | string[]; // ผ่านถ้ามีสิทธิ์ใดสิทธิ์หนึ่ง (สิทธิ์ของ role กำหนดในฐานข้อมูล)
 }
 
-export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles }) => {
-  const { isAuthenticated, isLoading, user } = useAuth();
+export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, permission }) => {
+  const { isAuthenticated, isLoading, user, can } = useAuth();
   const location = useLocation();
 
   if (isLoading) {
@@ -29,11 +29,11 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowe
     return <Navigate to={loginUrlWithRedirect(location.pathname + location.search)} replace />;
   }
 
-  if (allowedRoles && allowedRoles.length > 0) {
+  const required = permission === undefined ? [] : Array.isArray(permission) ? permission : [permission];
+  if (required.length > 0) {
     const userRoles = user?.roles || [];
-    const hasPermission = allowedRoles.some((role) => userRoles.includes(role));
 
-    if (!hasPermission) {
+    if (!required.some(can)) {
       return (
         <div className="flex min-h-screen items-center justify-center bg-canvas p-6">
           <div className="card w-full max-w-md space-y-4 p-8 text-center">
@@ -42,10 +42,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowe
             </div>
             <h2 className="text-2xl font-bold text-forest-950">403 ไม่มีสิทธิ์เข้าถึงหน้านี้</h2>
             <p className="text-sm text-slate-600">
-              บทบาทของคุณ <span className="badge-amber">{userRoles.join(', ')}</span> ไม่ได้รับอนุญาตให้ใช้งานหน้านี้
+              บทบาทของคุณ <span className="badge-amber">{userRoles.join(', ')}</span> ไม่ได้รับสิทธิ์ให้ใช้งานหน้านี้
             </p>
             <div className="border-t border-slate-100 pt-3 text-xs text-slate-500">
-              ต้องมีบทบาท: <span className="badge-mint">{allowedRoles.join(', ')}</span>
+              ต้องมีสิทธิ์: <span className="badge-mint">{required.join(', ')}</span>
             </div>
             <Link to="/courts" className="btn-primary w-full">
               กลับหน้าค้นหาสนาม

@@ -18,6 +18,7 @@ export interface UserDTO {
   memberTypeId: number;
   memberTypeName?: string;
   roles: string[];
+  permissions?: string[];
   isActive: boolean;
   createdAt: Date;
 }

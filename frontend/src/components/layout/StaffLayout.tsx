@@ -12,6 +12,8 @@ import {
   PackageCheck,
   ReceiptText,
   RotateCcw,
+  Settings,
+  ShieldCheck,
   Tag,
   Warehouse,
   X,
@@ -24,41 +26,43 @@ interface Item {
   to: string;
   label: string;
   icon: React.ReactNode;
-  roles: string[];
+  permission?: string | string[]; // เห็นเมนูถ้ามีสิทธิ์ใดสิทธิ์หนึ่ง · ไม่ระบุ = เห็นทุกคน
 }
 
 const ITEMS: { group: string; items: Item[] }[] = [
   {
     group: 'เมนูหลัก (Operations)',
     items: [
-      { to: '/dashboard', label: 'ภาพรวมระบบ (Overview)', icon: <LayoutGrid className="h-4 w-4" />, roles: ['STAFF', 'ADMIN', 'EXECUTIVE'] },
-      { to: '/staff/equipment/borrow', label: 'เช็คอินและยืมอุปกรณ์', icon: <Dumbbell className="h-4 w-4" />, roles: ['STAFF', 'ADMIN'] },
-      { to: '/staff/equipment/return', label: 'รับคืนอุปกรณ์ & ค่าปรับ', icon: <RotateCcw className="h-4 w-4" />, roles: ['STAFF', 'ADMIN'] },
-      { to: '/staff/payments', label: 'ตรวจสอบสลิป', icon: <ReceiptText className="h-4 w-4" />, roles: ['STAFF', 'ADMIN'] },
-      { to: '/staff/refunds', label: 'อนุมัติการคืนเงิน', icon: <ClipboardCheck className="h-4 w-4" />, roles: ['STAFF', 'ADMIN'] },
+      { to: '/dashboard', label: 'ภาพรวมระบบ (Overview)', icon: <LayoutGrid className="h-4 w-4" />, permission: ['dashboard.staff', 'dashboard.executive'] },
+      { to: '/staff/equipment/borrow', label: 'เช็คอินและยืมอุปกรณ์', icon: <Dumbbell className="h-4 w-4" />, permission: 'equipment.lend' },
+      { to: '/staff/equipment/return', label: 'รับคืนอุปกรณ์ & ค่าปรับ', icon: <RotateCcw className="h-4 w-4" />, permission: 'equipment.lend' },
+      { to: '/staff/payments', label: 'ตรวจสอบสลิป', icon: <ReceiptText className="h-4 w-4" />, permission: 'payment.verify' },
+      { to: '/staff/refunds', label: 'อนุมัติการคืนเงิน', icon: <ClipboardCheck className="h-4 w-4" />, permission: 'refund.review' },
     ],
   },
   {
     group: 'ผู้ดูแลระบบ (Admin)',
     items: [
-      { to: '/admin/courts', label: 'จัดการสนาม', icon: <Warehouse className="h-4 w-4" />, roles: ['ADMIN'] },
-      { to: '/admin/equipment', label: 'สต็อกอุปกรณ์กีฬา', icon: <PackageCheck className="h-4 w-4" />, roles: ['ADMIN'] },
-      { to: '/admin/promotions', label: 'โปรโมชั่น', icon: <Tag className="h-4 w-4" />, roles: ['ADMIN'] },
-      { to: '/admin/audit-logs', label: 'บันทึกการทำงาน', icon: <FileClock className="h-4 w-4" />, roles: ['ADMIN'] },
+      { to: '/admin/courts', label: 'จัดการสนาม', icon: <Warehouse className="h-4 w-4" />, permission: 'court.manage' },
+      { to: '/admin/equipment', label: 'สต็อกอุปกรณ์กีฬา', icon: <PackageCheck className="h-4 w-4" />, permission: 'catalog.manage' },
+      { to: '/admin/promotions', label: 'โปรโมชั่น', icon: <Tag className="h-4 w-4" />, permission: 'catalog.manage' },
+      { to: '/admin/audit-logs', label: 'บันทึกการทำงาน', icon: <FileClock className="h-4 w-4" />, permission: 'audit.view' },
+      { to: '/admin/settings', label: 'ตั้งค่าระบบ', icon: <Settings className="h-4 w-4" />, permission: 'settings.manage' },
+      { to: '/admin/roles', label: 'จัดการสิทธิ์', icon: <ShieldCheck className="h-4 w-4" />, permission: 'role.manage' },
     ],
   },
   {
     group: 'อื่น ๆ',
     items: [
-      { to: '/courts', label: 'หน้าค้นหาสนาม (ฝั่งลูกค้า)', icon: <Compass className="h-4 w-4" />, roles: ['STAFF', 'ADMIN', 'EXECUTIVE'] },
-      { to: '/health', label: 'สถานะระบบ (Health)', icon: <Activity className="h-4 w-4" />, roles: ['STAFF', 'ADMIN', 'EXECUTIVE'] },
+      { to: '/courts', label: 'หน้าค้นหาสนาม (ฝั่งลูกค้า)', icon: <Compass className="h-4 w-4" /> },
+      { to: '/health', label: 'สถานะระบบ (Health)', icon: <Activity className="h-4 w-4" /> },
     ],
   },
 ];
 
 // เลย์เอาต์ฝั่งพนักงาน/ผู้ดูแล/ผู้บริหาร: Sidebar ซ้าย + Topbar (ตาม Prototype UCS-5, 6.4, 7, 8, 9)
 export const StaffLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, hasRole } = useAuth();
+  const { user, hasRole, can } = useAuth();
   const [open, setOpen] = useState(false);
   const roles = user?.roles || [];
   const isExec = hasRole('EXECUTIVE') || hasRole('ADMIN');
@@ -74,7 +78,10 @@ export const StaffLayout: React.FC<{ children: React.ReactNode }> = ({ children 
       </div>
       <nav className="flex-1 space-y-5 overflow-y-auto">
         {ITEMS.map((g) => {
-          const visible = g.items.filter((i) => i.roles.some((r) => roles.includes(r)));
+          const visible = g.items.filter((i) => {
+            const need = i.permission === undefined ? [] : Array.isArray(i.permission) ? i.permission : [i.permission];
+            return need.length === 0 || need.some((c) => can(c));
+          });
           if (!visible.length) return null;
           return (
             <div key={g.group} className="space-y-1">

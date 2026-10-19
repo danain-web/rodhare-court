@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { BookingController } from '../controllers/booking.controller';
 import { EquipmentController } from '../controllers/equipment.controller';
 import { PaymentController } from '../controllers/payment.controller';
-import { requireAuth, requireRole, optionalAuth } from '../middleware/auth.middleware';
+import { requireAuth, requirePermission, optionalAuth } from '../middleware/auth.middleware';
 import { bookingLimiter } from '../middleware/security.middleware';
 
 const router = Router();
@@ -24,7 +24,7 @@ router.post('/bookings/:id/cancel', requireAuth, bookingController.cancelBooking
 router.post('/bookings/:id/check-in', requireAuth, bookingController.checkIn);
 
 // Staff: ค้นหาการจองด้วยหมายเลข / เช็คอินหน้าเคาน์เตอร์ (UC-5, BR8)
-router.get('/staff/bookings/lookup', requireAuth, requireRole('STAFF', 'ADMIN'), bookingController.lookupByNumber);
-router.post('/staff/check-in', requireAuth, requireRole('STAFF', 'ADMIN'), bookingController.staffCheckIn);
+router.get('/staff/bookings/lookup', requireAuth, requirePermission('booking.lookup'), bookingController.lookupByNumber);
+router.post('/staff/check-in', requireAuth, requirePermission('booking.checkin'), bookingController.staffCheckIn);
 
 export default router;

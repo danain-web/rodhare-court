@@ -13,6 +13,7 @@ export interface UserDTO {
   phone?: string;
   memberTypeId: number;
   roles: string[];
+  permissions?: string[];
   isActive: boolean;
   createdAt: string;
 }

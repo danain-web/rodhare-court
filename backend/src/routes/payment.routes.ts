@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { PaymentController } from '../controllers/payment.controller';
-import { requireAuth, requireRole } from '../middleware/auth.middleware';
+import { requireAuth, requirePermission } from '../middleware/auth.middleware';
 import { paymentUploadLimiter } from '../middleware/security.middleware';
 import { SLIP_MAX_BYTES, SLIP_ALLOWED_TYPES } from '../utils/slipStorage';
 import { AppError } from '../utils/appError';
@@ -43,8 +43,8 @@ router.patch('/notifications/:id/read', requireAuth, paymentController.markNotif
 // =====================================================================
 // Staff Protected Routes (UC-7: Inspector Console)
 // =====================================================================
-router.get('/staff/payments/pending',       requireAuth, requireRole('STAFF', 'ADMIN'), paymentController.getPendingPayments);
-router.post('/staff/payments/:id/verify',   requireAuth, requireRole('STAFF', 'ADMIN'), paymentController.verifyPayment);
-router.post('/staff/payments/:id/reject',   requireAuth, requireRole('STAFF', 'ADMIN'), paymentController.rejectPayment);
+router.get('/staff/payments/pending',       requireAuth, requirePermission('payment.verify'), paymentController.getPendingPayments);
+router.post('/staff/payments/:id/verify',   requireAuth, requirePermission('payment.verify'), paymentController.verifyPayment);
+router.post('/staff/payments/:id/reject',   requireAuth, requirePermission('payment.verify'), paymentController.rejectPayment);
 
 export default router;

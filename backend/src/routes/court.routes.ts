@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { CourtController } from '../controllers/court.controller';
-import { requireAuth, requireRole } from '../middleware/auth.middleware';
+import { requireAuth, requirePermission } from '../middleware/auth.middleware';
 
 const router = Router();
 const courtController = new CourtController();
@@ -12,9 +12,9 @@ router.get('/courts/:id', courtController.getCourtById);
 router.get('/courts/:id/availability', courtController.getCourtAvailability);
 
 // Admin Protected Endpoints
-router.post('/admin/courts', requireAuth, requireRole('ADMIN'), courtController.createCourt);
-router.put('/admin/courts/:id', requireAuth, requireRole('ADMIN'), courtController.updateCourt);
-router.put('/admin/courts/:id/image', requireAuth, requireRole('ADMIN'), courtController.updateCourtImage);
-router.delete('/admin/courts/:id', requireAuth, requireRole('ADMIN'), courtController.deleteCourt);
+router.post('/admin/courts', requireAuth, requirePermission('court.manage'), courtController.createCourt);
+router.put('/admin/courts/:id', requireAuth, requirePermission('court.manage'), courtController.updateCourt);
+router.put('/admin/courts/:id/image', requireAuth, requirePermission('court.manage'), courtController.updateCourtImage);
+router.delete('/admin/courts/:id', requireAuth, requirePermission('court.manage'), courtController.deleteCourt);
 
 export default router;

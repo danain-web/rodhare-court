@@ -17,6 +17,7 @@ interface AuthContextType {
   login: (user: UserDTO) => void;   // รับแค่ user data (ไม่มี token)
   logout: () => Promise<void>;
   hasRole: (role: string) => boolean;
+  can: (permission: string) => boolean;
   refreshUser: () => Promise<void>;
 }
 
@@ -81,6 +82,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     [user]
   );
 
+  // can: ตรวจ permission จากที่ backend ส่งมากับ user (กำหนดในฐานข้อมูล ไม่ฝังชื่อ role) ใช้ซ่อน/แสดงเมนู — backend ตรวจจริงทุก request
+  const can = useCallback((permission: string): boolean => !!user?.permissions?.includes(permission), [user]);
+
   return (
     <AuthContext.Provider
       value={{
@@ -90,6 +94,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         logout,
         hasRole,
+        can,
         refreshUser,
       }}
     >

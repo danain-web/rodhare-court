@@ -35,6 +35,3 @@ export const fitBytes = (text: string, maxBytes: number): string => {
 };
 
 export const round2 =(n: number): number => Math.round((n + Number.EPSILON) * 100) / 100;
-
-export const hasAnyRole = (roles: string[] | undefined, ...wanted: string[]): boolean =>
-  (roles || []).some((r) => wanted.includes(r));

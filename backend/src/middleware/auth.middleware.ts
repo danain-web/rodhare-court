@@ -1,10 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyToken, COOKIE_NAME } from '../utils/jwt';
 import { AuthService } from '../services/auth.service';
+import { PermissionService } from '../services/permission.service';
 import { AppError } from '../utils/appError';
 import { AuthUserPayload } from '../types';
 
 const authService = new AuthService();
+const permissionService = new PermissionService();
 
 // =====================================================================
 // extractToken — อ่าน JWT จาก httpOnly Cookie ก่อน fallback ไป Bearer Header
@@ -61,15 +63,18 @@ export const optionalAuth = async (req: Request, _res: Response, next: NextFunct
   next();
 };
 
-export const requireRole = (...allowedRoles: string[]) => {
-  return (req: Request, _res: Response, next: NextFunction) => {
-    if (!req.user) return next(AppError.unauthorized('กรุณาเข้าสู่ระบบก่อน'));
-    const userRoles = req.user.roles || [];
-    if (!allowedRoles.some((role) => userRoles.includes(role))) {
-      return next(
-        AppError.forbidden(`ไม่มีสิทธิ์ใช้งาน: ต้องเป็น [${allowedRoles.join(', ')}] แต่บทบาทของคุณคือ [${userRoles.join(', ')}]`)
-      );
+// ตรวจ "สิทธิ์" (permission) จากตาราง role_permissions ในฐานข้อมูล ไม่ฝังชื่อ role ในโค้ด
+// ผู้ใช้ผ่านถ้า role ใด role หนึ่งของตนมี permission นี้ — admin ปรับได้ที่หน้า "จัดการสิทธิ์"
+export const requirePermission = (code: string) => {
+  return async (req: Request, _res: Response, next: NextFunction) => {
+    try {
+      if (!req.user) throw AppError.unauthorized('กรุณาเข้าสู่ระบบก่อน');
+      if (!(await permissionService.hasPermission(req.user.roles || [], code))) {
+        throw AppError.forbidden('คุณไม่มีสิทธิ์ใช้งานส่วนนี้');
+      }
+      next();
+    } catch (error) {
+      next(error);
     }
-    next();
   };
 };

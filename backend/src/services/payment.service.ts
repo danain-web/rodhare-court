@@ -15,7 +15,7 @@ import {
 } from '../types/payment';
 import { BookingDTO } from '../types/booking';
 import { AppError } from '../utils/appError';
-import { hasAnyRole } from '../utils/params';
+import { PermissionService } from './permission.service';
 import {
   validateSlipBuffer,
   uploadSlipToSupabase,
@@ -34,6 +34,7 @@ const SLIP_READABLE_MIN_BYTES = 10 * 1024;
 
 export class PaymentService {
   private paymentRepository = new PaymentRepository();
+  private permissionService = new PermissionService();
   private bookingRepository = new BookingRepository();
 
   // ============================================================
@@ -68,7 +69,7 @@ export class PaymentService {
             `หมดเวลาการชำระเงินแล้ว (ต้องชำระภายใน ${BUSINESS_RULES.HOLD_MINUTES} นาที) การจองถูกยกเลิกอัตโนมัติ กรุณาทำรายการจองใหม่`
           );
         }
-        if (['CONFIRMED', 'PAYMENT_VERIFIED', 'CHECKED_IN', 'COMPLETED'].includes(booking.status)) {
+        if (['CONFIRMED', 'PAYMENT_VERIFIED', 'CHECKED_IN', 'COMPLETED', 'NO_SHOW'].includes(booking.status)) {
           throw AppError.conflict('การจองนี้ชำระเงินเรียบร้อยแล้ว');
         }
         if (booking.status !== 'PENDING_PAYMENT') {
@@ -308,18 +309,19 @@ export class PaymentService {
   async getReceiptByBookingId(bookingId: number, userId: number, roles: string[]): Promise<ReceiptDTO> {
     const receipt = await withConnection((conn) => this.paymentRepository.getReceiptByBookingId(conn, bookingId));
     if (!receipt) throw AppError.notFound('ยังไม่มีใบเสร็จ (รอพนักงานอนุมัติการชำระเงิน)');
-    if (!hasAnyRole(roles, 'STAFF', 'ADMIN', 'EXECUTIVE') && receipt.userId !== userId) throw AppError.forbidden('ดูได้เฉพาะใบเสร็จของตนเองเท่านั้น');
+    if (receipt.userId !== userId && !(await this.permissionService.hasPermission(roles, 'booking.view_all'))) throw AppError.forbidden('ดูได้เฉพาะใบเสร็จของตนเองเท่านั้น');
     return receipt;
   }
 
   // Object-level authorization: ตรวจเจ้าของ "การจอง" ก่อน (ไม่อิงว่ามี payment หรือยัง)
   // รูปสลิปเป็นข้อมูลส่วนบุคคล → ลูกค้าเห็นเฉพาะของตนเอง, พนักงาน/ผู้ดูแลเห็นได้ (ผู้บริหารเห็นข้อมูลยอดแต่ไม่เห็นรูป)
   async getPaymentsByBooking(bookingId: number, userId: number, roles: string[]): Promise<PaymentDTO[]> {
-    const isStaff = hasAnyRole(roles, 'STAFF', 'ADMIN');
+    const isStaff = await this.permissionService.hasPermission(roles, 'payment.verify');
+    const canViewAll = isStaff || (await this.permissionService.hasPermission(roles, 'booking.view_all'));
     const payments = await withConnection(async (conn) => {
       const owner = await conn.query<{ user_id: number }>('SELECT user_id FROM bookings WHERE booking_id = $1', [bookingId]);
       if (!owner.rows[0]) throw AppError.notFound('ไม่พบการจอง');
-      if (!isStaff && !hasAnyRole(roles, 'EXECUTIVE') && owner.rows[0].user_id !== userId) {
+      if (!canViewAll && owner.rows[0].user_id !== userId) {
         throw AppError.forbidden('ดูได้เฉพาะการชำระเงินของตนเองเท่านั้น');
       }
       return this.paymentRepository.getPaymentsByBooking(conn, bookingId);

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { RefundController } from '../controllers/refund.controller';
-import { requireAuth, requireRole } from '../middleware/auth.middleware';
+import { requireAuth, requirePermission } from '../middleware/auth.middleware';
 
 const router = Router();
 const refundController = new RefundController();
@@ -12,8 +12,8 @@ router.post('/bookings/:id/cancel-refund', requireAuth, refundController.execute
 
 // Refunds management (UC-6)
 router.get('/refunds/my', requireAuth, refundController.getMyRefunds);
-router.get('/staff/refunds/pending', requireAuth, requireRole('STAFF', 'ADMIN'), refundController.getPendingRefunds);
-router.post('/staff/refunds/:id/approve', requireAuth, requireRole('STAFF', 'ADMIN'), refundController.approveRefund);
-router.post('/staff/refunds/:id/reject', requireAuth, requireRole('STAFF', 'ADMIN'), refundController.rejectRefund);
+router.get('/staff/refunds/pending', requireAuth, requirePermission('refund.review'), refundController.getPendingRefunds);
+router.post('/staff/refunds/:id/approve', requireAuth, requirePermission('refund.review'), refundController.approveRefund);
+router.post('/staff/refunds/:id/reject', requireAuth, requirePermission('refund.review'), refundController.rejectRefund);
 
 export default router;

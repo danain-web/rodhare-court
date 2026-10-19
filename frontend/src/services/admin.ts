@@ -138,3 +138,50 @@ export const createPricingRateApi = async (data: {
   const response = await api.post('/admin/pricing-rates', data);
   return response.data.data;
 };
+
+// Roles & Permissions
+export interface RoleWithPermissions {
+  roleId: number;
+  roleName: string;
+  description?: string;
+  permissions: string[];
+}
+
+export interface PermissionItem {
+  permissionId: number;
+  code: string;
+  description: string;
+}
+
+export const getAdminRolesApi = async (): Promise<RoleWithPermissions[]> => {
+  const response = await api.get('/admin/roles');
+  return response.data.data;
+};
+
+export const getAdminPermissionsApi = async (): Promise<PermissionItem[]> => {
+  const response = await api.get('/admin/permissions');
+  return response.data.data;
+};
+
+export const updateRolePermissionsApi = async (roleId: number, permissions: string[]): Promise<RoleWithPermissions> => {
+  const response = await api.put(`/admin/roles/${roleId}/permissions`, { permissions });
+  return response.data.data;
+};
+// System settings
+export interface AppSetting {
+  key: string;
+  value: number;
+  description: string;
+  min: number;
+  max: number;
+}
+
+export const getAdminSettingsApi = async (): Promise<AppSetting[]> => {
+  const response = await api.get('/admin/settings');
+  return response.data.data;
+};
+
+export const updateAdminSettingApi = async (key: string, value: number): Promise<AppSetting> => {
+  const response = await api.put(`/admin/settings/${key}`, { value });
+  return response.data.data;
+};

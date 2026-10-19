@@ -16,6 +16,8 @@ const HealthCheckPage = lazy(() => import('./pages/HealthCheckPage').then((m) =>
 const AdminCourtsPage = lazy(() => import('./pages/AdminCourtsPage').then((m) => ({ default: m.AdminCourtsPage })));
 const AdminPromotionsPage = lazy(() => import('./pages/AdminPromotionsPage').then((m) => ({ default: m.AdminPromotionsPage })));
 const AdminEquipmentPage = lazy(() => import('./pages/AdminEquipmentPage').then((m) => ({ default: m.AdminEquipmentPage })));
+const AdminSettingsPage = lazy(() => import('./pages/AdminSettingsPage').then((m) => ({ default: m.AdminSettingsPage })));
+const AdminRolesPage = lazy(() => import('./pages/AdminRolesPage').then((m) => ({ default: m.AdminRolesPage })));
 const AdminAuditLogsPage = lazy(() => import('./pages/AdminAuditLogsPage').then((m) => ({ default: m.AdminAuditLogsPage })));
 const CreateBookingPage = lazy(() => import('./pages/CreateBookingPage').then((m) => ({ default: m.CreateBookingPage })));
 const BookingSuccessPage = lazy(() => import('./pages/BookingSuccessPage').then((m) => ({ default: m.BookingSuccessPage })));
@@ -122,7 +124,7 @@ export const App: React.FC = () => {
             <Route
               path="/staff/payments"
               element={
-                <ProtectedRoute allowedRoles={['STAFF', 'ADMIN']}>
+                <ProtectedRoute permission="payment.verify">
                   <StaffPaymentsPage />
                 </ProtectedRoute>
               }
@@ -131,7 +133,7 @@ export const App: React.FC = () => {
             <Route
               path="/staff/refunds"
               element={
-                <ProtectedRoute allowedRoles={['STAFF', 'ADMIN']}>
+                <ProtectedRoute permission="refund.review">
                   <StaffRefundsPage />
                 </ProtectedRoute>
               }
@@ -140,7 +142,7 @@ export const App: React.FC = () => {
             <Route
               path="/staff/equipment/borrow"
               element={
-                <ProtectedRoute allowedRoles={['STAFF', 'ADMIN']}>
+                <ProtectedRoute permission="equipment.lend">
                   <StaffBorrowPage />
                 </ProtectedRoute>
               }
@@ -149,7 +151,7 @@ export const App: React.FC = () => {
             <Route
               path="/staff/equipment/return"
               element={
-                <ProtectedRoute allowedRoles={['STAFF', 'ADMIN']}>
+                <ProtectedRoute permission="equipment.lend">
                   <StaffReturnPage />
                 </ProtectedRoute>
               }
@@ -177,7 +179,7 @@ export const App: React.FC = () => {
             <Route
               path="/admin/courts"
               element={
-                <ProtectedRoute allowedRoles={['ADMIN']}>
+                <ProtectedRoute permission="court.manage">
                   <AdminCourtsPage />
                 </ProtectedRoute>
               }
@@ -186,7 +188,7 @@ export const App: React.FC = () => {
             <Route
               path="/admin/promotions"
               element={
-                <ProtectedRoute allowedRoles={['ADMIN']}>
+                <ProtectedRoute permission="catalog.manage">
                   <AdminPromotionsPage />
                 </ProtectedRoute>
               }
@@ -195,7 +197,7 @@ export const App: React.FC = () => {
             <Route
               path="/admin/equipment"
               element={
-                <ProtectedRoute allowedRoles={['ADMIN']}>
+                <ProtectedRoute permission="catalog.manage">
                   <AdminEquipmentPage />
                 </ProtectedRoute>
               }
@@ -204,12 +206,29 @@ export const App: React.FC = () => {
             <Route
               path="/admin/audit-logs"
               element={
-                <ProtectedRoute allowedRoles={['ADMIN']}>
+                <ProtectedRoute permission="audit.view">
                   <AdminAuditLogsPage />
                 </ProtectedRoute>
               }
             />
 
+            <Route
+              path="/admin/settings"
+              element={
+                <ProtectedRoute permission="settings.manage">
+                  <AdminSettingsPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/admin/roles"
+              element={
+                <ProtectedRoute permission="role.manage">
+                  <AdminRolesPage />
+                </ProtectedRoute>
+              }
+            />
             <Route path="/health" element={<HealthCheckPage />} />
 
             {/* Fallback route */}
