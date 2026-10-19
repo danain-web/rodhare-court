@@ -1,10 +1,10 @@
 import app from './app';
 import { config } from './config/env';
 import { initDbPool, closeDbPool } from './config/db';
-import { BookingService } from './services/booking.service';
+import { MaintenanceService } from './services/maintenance.service';
 
 const PORT = config.port;
-const bookingService = new BookingService();
+const maintenanceService = new MaintenanceService();
 
 const startServer = async () => {
   // ค่า environment ถูกตรวจใน config/env.ts (validateConfig) แล้ว — ถ้าผิด process จะหยุดก่อนถึงบรรทัดนี้
@@ -24,10 +24,13 @@ const startServer = async () => {
     if (running) return;
     running = true;
     try {
-      const { expired, completed } = await bookingService.runMaintenance();
-      if (expired || completed) {
-        console.log(`🕒 Maintenance: expired ${expired} unpaid booking(s) (BR3), completed ${completed} booking(s)`);
+      const r = await maintenanceService.runAll();
+      if (r.expired || r.noShow || r.completed || r.remindersFirst || r.remindersSecond || r.emailsSent || r.emailsFailed) {
+        console.log(
+          `🕒 Maintenance: expired ${r.expired}, no-show ${r.noShow}, completed ${r.completed}, reminders ${r.remindersFirst}+${r.remindersSecond}, emails sent ${r.emailsSent} failed ${r.emailsFailed}`
+        );
       }
+      if (r.errors.length) console.error('Maintenance step(s) failed:', r.errors.join(' | '));
     } catch (err) {
       console.error('Maintenance job failed:', (err as Error).message);
     } finally {

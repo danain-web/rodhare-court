@@ -69,6 +69,8 @@ export default async function globalSetup(): Promise<void> {
     PAYMENT_PROMPTPAY_ID: '0812345678',
     // เทสต์ส่วนใหญ่ตรวจขั้นตอนเจ้าหน้าที่อนุมัติ → ปิดโหมดสาธิต (demo.test.ts เปิดเองเพื่อทดสอบโหมดนี้)
     PAYMENT_DEMO_MODE: 'false',
+    // ความลับของ endpoint cron (ค่าทดสอบ) · อีเมลในโหมดเทสต์ไม่ส่งจริง (utils/email.ts เก็บลง testOutbox)
+    CRON_SECRET: crypto.randomBytes(24).toString('hex'),
   });
 
   (globalThis as any).__RODHARE_TEST_PG__ = pg;

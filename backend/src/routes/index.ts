@@ -8,11 +8,13 @@ import borrowingRoutes from './borrowing.routes';
 import paymentRoutes from './payment.routes';
 import refundRoutes from './refund.routes';
 import adminRoutes from './admin.routes';
+import internalRoutes from './internal.routes';
 
 const router = Router();
 
 router.use('/health', healthRoutes);
 router.use('/auth', authRoutes);
+router.use('/', internalRoutes);
 router.use('/', adminRoutes);
 router.use('/', refundRoutes);
 router.use('/', paymentRoutes);

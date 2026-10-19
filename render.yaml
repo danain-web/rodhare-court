@@ -40,6 +40,13 @@ services:
         sync: false
       - key: PAYMENT_BANK_ACCOUNT_NO
         sync: false
+      # แจ้งเตือนอีเมล (Resend) + ตัวตั้งเวลาภายนอก — ดู docs/NOTIFICATIONS_SETUP.md
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+      - key: CRON_SECRET
+        generateValue: true
       - key: JWT_SECRET
         generateValue: true
       - key: DATABASE_URL
