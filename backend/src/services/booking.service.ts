@@ -7,6 +7,7 @@ import { EquipmentRepository } from '../repositories/equipment.repository';
 import {
   completeFinishedBookings,
   expireStaleHolds,
+  markNoShows,
   insertAudit,
   insertNotification,
   insertStatusHistory,
@@ -22,9 +23,9 @@ import {
   parseLocalDate,
   validateTimeRange,
 } from '../utils/datetime';
-import { hasAnyRole } from '../utils/params';
+import { PermissionService } from './permission.service';
+import { SettingsService } from './settings.service';
 
-const STAFF_ROLES = ['STAFF', 'ADMIN', 'EXECUTIVE'];
 
 const generateBookingNumber = (bookingDate: string): string =>
   `BK-${bookingDate.replace(/-/g, '')}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
@@ -40,6 +41,8 @@ export interface SlotValidationInput {
 
 export class BookingService {
   private bookingRepository = new BookingRepository();
+  private permissionService = new PermissionService();
+  private settingsService = new SettingsService();
   private courtRepository = new CourtRepository();
   private equipmentRepository = new EquipmentRepository();
   private pricingService = new PricingService();
@@ -77,6 +80,7 @@ export class BookingService {
 
     // BR3: ปล่อยสนามที่ถูกจองค้างไว้เกิน 15 นาทีโดยไม่ชำระ ก่อนตรวจการจองทับ
     await expireStaleHolds(conn, { courtId: v.court.courtId, bookingDate: v.bookingDate });
+    await markNoShows(conn, { courtId: v.court.courtId, bookingDate: v.bookingDate });
     await expireStaleHolds(conn, { userId: v.userId });
 
     // BR2: สนามที่ถูกจองแล้วไม่สามารถจองซ้ำได้
@@ -272,15 +276,21 @@ export class BookingService {
   }
 
   async getMyBookings(userId: number): Promise<BookingDTO[]> {
-    await withTransaction((conn) => expireStaleHolds(conn, { userId }));
+    await withTransaction(async (conn) => {
+      await expireStaleHolds(conn, { userId });
+      await markNoShows(conn, { userId });
+    });
     return withConnection((conn) => this.bookingRepository.getBookingsByUser(conn, userId));
   }
 
   async getBookingById(bookingId: number, userId: number, roles: string[]): Promise<BookingDTO> {
-    await withTransaction((conn) => expireStaleHolds(conn, { bookingId }));
+    await withTransaction(async (conn) => {
+      await expireStaleHolds(conn, { bookingId });
+      await markNoShows(conn, { bookingId });
+    });
     const booking = await withConnection((conn) => this.bookingRepository.getBookingById(conn, bookingId));
     if (!booking) throw AppError.notFound('ไม่พบการจอง');
-    if (!hasAnyRole(roles, ...STAFF_ROLES) && booking.userId !== userId) {
+    if (booking.userId !== userId && !(await this.permissionService.hasPermission(roles, 'booking.view_all'))) {
       throw AppError.forbidden('ดูได้เฉพาะการจองของตนเองเท่านั้น');
     }
     return booking;
@@ -302,16 +312,22 @@ export class BookingService {
     roles: string[],
     ipAddress?: string
   ): Promise<BookingDTO> {
+    // ปล่อยการจองที่เลยเวลาเช็คอินเป็น NO_SHOW ก่อน (ธุรกรรมแยก เพราะถ้า throw ด้านล่างธุรกรรมจะ rollback)
+    const knownId =
+      target.bookingId ??
+      (target.bookingNumber ? await withConnection((conn) => this.bookingRepository.findBookingIdByNumber(conn, target.bookingNumber!)) : null);
+    if (knownId) await withTransaction((conn) => markNoShows(conn, { bookingId: knownId }));
+
     return withTransaction(async (conn) => {
       const bookingId =
         target.bookingId ?? (target.bookingNumber ? await this.bookingRepository.findBookingIdByNumber(conn, target.bookingNumber) : null);
       const booking = bookingId ? await this.bookingRepository.lockBooking(conn, bookingId) : null;
       if (!booking) throw AppError.notFound('ไม่พบการจอง');
-      if (!hasAnyRole(roles, 'STAFF', 'ADMIN') && booking.userId !== actorId) {
+      if (booking.userId !== actorId && !(await this.permissionService.hasPermission(roles, 'booking.checkin'))) {
         throw AppError.forbidden('เช็คอินได้เฉพาะการจองของตนเองเท่านั้น');
       }
 
-      this.assertCheckInAllowed(booking);
+      this.assertCheckInAllowed(booking, await this.settingsService.getCheckInWindow(conn));
 
       await this.bookingRepository.transitionStatus(conn, booking.bookingId, ['CONFIRMED', 'PAYMENT_VERIFIED'], 'CHECKED_IN', {
         checkedInBy: actorId,
@@ -337,7 +353,10 @@ export class BookingService {
     }, actorId);
   }
 
-  private assertCheckInAllowed(booking: LockedBooking): void {
+  private assertCheckInAllowed(booking: LockedBooking, window: { earlyMinutes: number; lateMinutes: number }): void {
+    if (booking.status === 'NO_SHOW') {
+      throw AppError.badRequest('ไม่อนุญาตให้เช็คอิน: ไม่ได้เช็คอินภายในเวลาที่กำหนด สนามถูกปล่อยคืนแล้ว (ไม่คืนเงิน)');
+    }
     if (booking.status === 'CHECKED_IN') throw AppError.conflict('การจองนี้เช็คอินไปแล้ว');
     if (booking.status === 'PENDING_PAYMENT') throw AppError.badRequest('ไม่อนุญาตให้เช็คอิน: รายการยังไม่ได้ชำระเงิน');
     if (!['CONFIRMED', 'PAYMENT_VERIFIED'].includes(booking.status)) {
@@ -347,20 +366,24 @@ export class BookingService {
     const startAt = combineDateTime(booking.bookingDate, booking.startTime);
     const endAt = combineDateTime(booking.bookingDate, booking.endTime);
     const minutesBeforeStart = hoursBetween(now, startAt) * 60;
-    if (minutesBeforeStart > BUSINESS_RULES.CHECKIN_EARLY_MINUTES) {
+    if (minutesBeforeStart > window.earlyMinutes) {
       throw AppError.badRequest(
-        `ยังไม่ถึงเวลาเช็คอิน (สามารถเช็คอินได้ก่อนเวลาไม่เกิน ${BUSINESS_RULES.CHECKIN_EARLY_MINUTES} นาที, เริ่ม ${booking.bookingDate} ${booking.startTime})`
+        `ยังไม่ถึงเวลาเช็คอิน (สามารถเช็คอินได้ก่อนเวลาไม่เกิน ${window.earlyMinutes} นาที, เริ่ม ${booking.bookingDate} ${booking.startTime})`
       );
+    }
+    if (minutesBeforeStart < -window.lateMinutes) {
+      throw AppError.badRequest(`เลยเวลาเช็คอินแล้ว (เช็คอินได้หลังเวลาเริ่มไม่เกิน ${window.lateMinutes} นาที) สนามจะถูกปล่อยคืนและไม่คืนเงิน`);
     }
     if (now.getTime() >= endAt.getTime()) throw AppError.badRequest('เลยเวลาการจองแล้ว ไม่สามารถเช็คอินได้');
   }
 
   // งานเบื้องหลัง: BR3 ยกเลิกการจองที่ไม่ชำระใน 15 นาที และปิดการจองที่จบเวลาแล้ว
-  async runMaintenance(): Promise<{ expired: number; completed: number }> {
+  async runMaintenance(): Promise<{ expired: number; noShow: number; completed: number }> {
     return withTransaction(async (conn) => {
       const expired = await expireStaleHolds(conn);
+      const noShow = await markNoShows(conn); // ต้องทำก่อน completeFinishedBookings
       const completed = await completeFinishedBookings(conn);
-      return { expired, completed };
+      return { expired, noShow, completed };
     });
   }
 

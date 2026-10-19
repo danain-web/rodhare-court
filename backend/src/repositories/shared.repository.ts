@@ -1,4 +1,5 @@
 import { DbConnection } from '../config/db';
+import { BUSINESS_RULES } from '../config/env';
 import { fitBytes } from '../utils/params';
 
 // =====================================================================
@@ -49,12 +50,19 @@ export const insertAudit = async (conn: DbConnection, entry: AuditEntry): Promis
 // =====================================================================
 export const insertNotification = async (
   conn: DbConnection,
-  n: { userId: number; bookingId?: number | null; title: string; message: string; type: 'INFO' | 'SUCCESS' | 'WARNING' | 'ALERT' }
+  n: {
+    userId: number;
+    bookingId?: number | null;
+    title: string;
+    message: string;
+    type: 'INFO' | 'SUCCESS' | 'WARNING' | 'ALERT';
+    email?: boolean; // true = ส่งอีเมลซ้ำด้วย (เข้าคิว outbox ให้ตัวส่งอีเมลมาเก็บไปส่ง)
+  }
 ): Promise<void> => {
   await conn.query(
-    `INSERT INTO notifications (user_id, booking_id, title, message, type)
-     VALUES ($1, $2, $3, $4, $5)`,
-    [n.userId, n.bookingId ?? null, fitBytes(n.title, 100), fitBytes(n.message, 500), n.type]
+    `INSERT INTO notifications (user_id, booking_id, title, message, type, email_pending)
+     VALUES ($1, $2, $3, $4, $5, $6)`,
+    [n.userId, n.bookingId ?? null, fitBytes(n.title, 100), fitBytes(n.message, 500), n.type, n.email === true]
   );
 };
 
@@ -176,6 +184,78 @@ export const expireStaleHolds = async (
     });
   }
   return expired;
+};
+
+// =====================================================================
+// จองแล้วไม่มา: เลยเวลาเช็กอิน (เริ่ม + checkin.late_minutes) โดยยังไม่เช็กอิน → NO_SHOW
+// ปล่อยสนามคืน (NO_SHOW ไม่นับเป็นสถานะที่ครองสนาม) · ไม่คืนเงินทุกกรณี · ต้องเรียกก่อน completeFinishedBookings
+// เวลาตัดสิน = เร็วกว่าระหว่าง (เริ่ม + X นาที) กับเวลาสิ้นสุดการจอง กันกรณีตั้ง X ยาวกว่าช่วงจอง
+// =====================================================================
+export const markNoShows = async (
+  conn: DbConnection,
+  filter: { courtId?: number; bookingDate?: string; userId?: number; bookingId?: number } = {}
+): Promise<number> => {
+  const params: any[] = [BUSINESS_RULES.CHECKIN_LATE_MINUTES];
+  const where: string[] = [
+    `b.status IN ('CONFIRMED', 'PAYMENT_VERIFIED')`,
+    `LEAST(
+       ${bookingStartTs('b')} + make_interval(mins => COALESCE((SELECT setting_value::int FROM app_settings WHERE setting_key = 'checkin.late_minutes'), $1)),
+       ${bookingEndTs('b')}
+     ) < NOW()`,
+  ];
+  if (filter.courtId) {
+    params.push(filter.courtId);
+    where.push(`b.court_id = $${params.length}`);
+  }
+  if (filter.bookingDate) {
+    params.push(filter.bookingDate);
+    where.push(`b.booking_date = $${params.length}::DATE`);
+  }
+  if (filter.userId) {
+    params.push(filter.userId);
+    where.push(`b.user_id = $${params.length}`);
+  }
+  if (filter.bookingId) {
+    params.push(filter.bookingId);
+    where.push(`b.booking_id = $${params.length}`);
+  }
+
+  const candidates = await conn.query<{ booking_id: number; user_id: number; booking_number: string; status: string }>(
+    `SELECT b.booking_id, b.user_id, b.booking_number, b.status FROM bookings b
+      WHERE ${where.join(' AND ')}
+      FOR UPDATE SKIP LOCKED`,
+    params
+  );
+
+  let marked = 0;
+  for (const row of candidates.rows) {
+    const upd = await conn.query(
+      `UPDATE bookings SET status = 'NO_SHOW', no_show_at = NOW()
+        WHERE booking_id = $1 AND status = $2`,
+      [row.booking_id, row.status]
+    );
+    if (!upd.rowCount) continue;
+    marked++;
+    await releaseUnborrowedEquipment(conn, row.booking_id);
+    await insertStatusHistory(conn, row.booking_id, 'NO_SHOW', 'ไม่เช็กอินภายในเวลาที่กำหนด ระบบปล่อยสนามคืน (ไม่คืนเงิน)', null);
+    await insertNotification(conn, {
+      userId: row.user_id,
+      bookingId: row.booking_id,
+      title: 'ไม่มาใช้บริการ (No-show)',
+      message: `การจอง ${row.booking_number} ไม่ได้เช็กอินภายในเวลาที่กำหนด ระบบปล่อยสนามให้ผู้อื่นแล้วและไม่คืนเงิน`,
+      type: 'WARNING',
+      email: true,
+    });
+    await insertAudit(conn, {
+      userId: null,
+      action: 'NO_SHOW',
+      entityName: 'bookings',
+      entityId: row.booking_id,
+      oldValues: { status: row.status },
+      newValues: { status: 'NO_SHOW' },
+    });
+  }
+  return marked;
 };
 
 // =====================================================================

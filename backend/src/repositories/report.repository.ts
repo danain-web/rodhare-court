@@ -134,7 +134,7 @@ export class ReportRepository {
     );
     const bookingsByCourt = await conn.query(
       `SELECT c.name AS court_name, COUNT(b.booking_id) AS bookings,
-              COALESCE(SUM(CASE WHEN b.status IN ('CONFIRMED', 'CHECKED_IN', 'COMPLETED') THEN b.final_amount END), 0) AS revenue
+              COALESCE(SUM(CASE WHEN b.status IN ('CONFIRMED', 'CHECKED_IN', 'COMPLETED', 'NO_SHOW') THEN b.final_amount END), 0) AS revenue
          FROM courts c
          LEFT JOIN bookings b ON b.court_id = c.court_id
            AND b.booking_date >= DATE_TRUNC('month', NOW())

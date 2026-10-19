@@ -1,6 +1,6 @@
 import { withConnection, withTransaction } from '../config/db';
 import { CourtRepository } from '../repositories/court.repository';
-import { expireStaleHolds, insertAudit } from '../repositories/shared.repository';
+import { expireStaleHolds, insertAudit, markNoShows } from '../repositories/shared.repository';
 import { CourtDTO, SportTypeDTO, CourtDetailDTO, AvailabilitySlot } from '../types/court';
 import { AppError } from '../utils/appError';
 import { combineDateTime, dayOfWeek, minutesToTime, parseLocalDate, toMinutes } from '../utils/datetime';
@@ -30,7 +30,10 @@ export class CourtService {
     const court = await this.getCourtById(courtId);
 
     // BR3: ปล่อยการจองที่ค้างชำระเกิน 15 นาที ให้ช่วงเวลากลับมาว่างก่อนแสดงผล
-    await withTransaction((conn) => expireStaleHolds(conn, { courtId, bookingDate: dateStr }));
+    await withTransaction(async (conn) => {
+      await expireStaleHolds(conn, { courtId, bookingDate: dateStr });
+      await markNoShows(conn, { courtId, bookingDate: dateStr }); // ไม่เช็กอินตามเวลา → ปล่อยสนามคืนก่อนแสดงผล
+    });
     const bookings = await withConnection((conn) => this.courtRepository.getBookingsOnDate(conn, courtId, dateStr));
 
     const opHour = court.operatingHours.find((h) => h.dayOfWeek === dayOfWeek(dateStr));

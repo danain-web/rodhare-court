@@ -12,6 +12,7 @@ const STATUS: Record<string, { label: string; tone: Tone }> = {
   CANCELLED: { label: 'ยกเลิกแล้ว', tone: 'rose' },
   REFUNDED: { label: 'คืนเงินแล้ว', tone: 'slate' },
   EXPIRED: { label: 'หมดเวลาชำระ', tone: 'rose' },
+  NO_SHOW: { label: 'ไม่มาใช้บริการ', tone: 'rose' },
   // การชำระเงิน / คำขอคืนเงิน
   PENDING: { label: 'รอตรวจสอบ', tone: 'amber' },
   VERIFIED: { label: 'อนุมัติแล้ว', tone: 'mint' },

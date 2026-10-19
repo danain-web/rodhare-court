@@ -74,7 +74,7 @@ export interface Booking {
   totalEquipmentFee: number;
   discountAmount: number;
   finalAmount: number;
-  status: 'PENDING_PAYMENT' | 'PAYMENT_VERIFIED' | 'CONFIRMED' | 'CHECKED_IN' | 'COMPLETED' | 'CANCELLED' | 'EXPIRED';
+  status: 'PENDING_PAYMENT' | 'PAYMENT_VERIFIED' | 'CONFIRMED' | 'CHECKED_IN' | 'COMPLETED' | 'CANCELLED' | 'EXPIRED' | 'NO_SHOW';
   createdAt: string;
   updatedAt: string;
   equipment?: BookingEquipmentDTO[];

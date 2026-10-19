@@ -9,12 +9,14 @@ import { BorrowInput, ReturnInput, BorrowingDTO, FineDTO } from '../types/borrow
 import { AppError } from '../utils/appError';
 import { combineDateTime } from '../utils/datetime';
 import { round2 } from '../utils/params';
+import { SettingsService } from './settings.service';
 
 export class BorrowingService {
   private borrowingRepository = new BorrowingRepository();
   private bookingRepository = new BookingRepository();
   private equipmentRepository = new EquipmentRepository();
   private courtRepository = new CourtRepository();
+  private settingsService = new SettingsService();
 
   // ---------------- UC-05-02 / BR9: ยืมได้เฉพาะผู้ที่มีการจองสนามในวันและเวลานั้น ----------------
   async borrowEquipment(input: BorrowInput, staffUserId: number, ipAddress?: string): Promise<BorrowingDTO> {
@@ -34,7 +36,8 @@ export class BorrowingService {
       const now = new Date();
       const startAt = combineDateTime(booking.bookingDate, booking.startTime);
       const endAt = combineDateTime(booking.bookingDate, booking.endTime);
-      const earliest = new Date(startAt.getTime() - BUSINESS_RULES.CHECKIN_EARLY_MINUTES * 60_000);
+      const { earlyMinutes } = await this.settingsService.getCheckInWindow(conn);
+      const earliest = new Date(startAt.getTime() - earlyMinutes * 60_000);
       if (now < earliest || now >= endAt) {
         throw AppError.badRequest(
           `ยืมอุปกรณ์ได้เฉพาะในวันและเวลาที่จองไว้ (${booking.bookingDate} ${booking.startTime}-${booking.endTime})`

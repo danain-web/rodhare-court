@@ -170,7 +170,7 @@ export const BookingDetailPage: React.FC = () => {
 
   const b: any = booking;
   const canModify = ['PENDING_PAYMENT', 'PAYMENT_VERIFIED', 'CONFIRMED'].includes(booking.status);
-  const isPaid = ['CONFIRMED', 'PAYMENT_VERIFIED', 'CHECKED_IN', 'COMPLETED'].includes(booking.status);
+  const isPaid = ['CONFIRMED', 'PAYMENT_VERIFIED', 'CHECKED_IN', 'COMPLETED', 'NO_SHOW'].includes(booking.status);
   const slipPending = b.latestPaymentStatus === 'PENDING';
 
   return (
@@ -335,9 +335,20 @@ export const BookingDetailPage: React.FC = () => {
                 </Link>
               )}
               {['CONFIRMED', 'PAYMENT_VERIFIED'].includes(booking.status) && (
-                <button onClick={handleCheckIn} disabled={isCheckingIn} className="btn-soft w-full">
-                  {isCheckingIn ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />} เช็คอินเข้าสนาม
-                </button>
+                <>
+                  <button onClick={handleCheckIn} disabled={isCheckingIn} className="btn-soft w-full">
+                    {isCheckingIn ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />} เช็คอินเข้าสนาม
+                  </button>
+                  <p className="text-[11px] text-slate-500">
+                    ต้องเช็คอินภายในช่วงเวลาที่กำหนด (ก่อนและหลังเวลาเริ่มเล็กน้อย) หากไม่เช็คอินจะถือว่าไม่มา ระบบจะปล่อยสนามให้ผู้อื่นและไม่คืนเงิน
+                  </p>
+                </>
+              )}
+              {booking.status === 'NO_SHOW' && (
+                <div className="flex items-start gap-2 rounded-xl bg-rose-50 p-3 text-xs text-rose-700">
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                  <span>ไม่ได้เช็คอินภายในเวลาที่กำหนด ระบบปล่อยสนามคืนแล้ว และไม่คืนเงินทุกกรณี</span>
+                </div>
               )}
               {canModify && (
                 <button onClick={handleOpenCancelModal} className="btn-danger-soft w-full">

@@ -29,7 +29,7 @@ const TABS = [
   { key: 'active', label: 'กำลังดำเนินการ / ยืนยันแล้ว', match: (b: Booking) => ['CONFIRMED', 'PAYMENT_VERIFIED', 'CHECKED_IN'].includes(b.status) },
   { key: 'pending', label: 'รอชำระเงิน', match: (b: Booking) => b.status === 'PENDING_PAYMENT' },
   { key: 'done', label: 'เข้าเล่นเสร็จสิ้น', match: (b: Booking) => b.status === 'COMPLETED' },
-  { key: 'cancelled', label: 'ยกเลิก / คืนเงิน / หมดเวลา', match: (b: Booking) => ['CANCELLED', 'REFUNDED', 'EXPIRED'].includes(b.status) },
+  { key: 'cancelled', label: 'ยกเลิก / คืนเงิน / หมดเวลา / ไม่มา', match: (b: Booking) => ['CANCELLED', 'REFUNDED', 'EXPIRED', 'NO_SHOW'].includes(b.status) },
 ] as const;
 
 const REASONS = ['ติดธุระกะทันหัน', 'สภาพอากาศไม่เอื้ออำนวย', 'ผู้เล่นไม่ครบ', 'ต้องการเปลี่ยนวันเวลา', 'อื่น ๆ'];

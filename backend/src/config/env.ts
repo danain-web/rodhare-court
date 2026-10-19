@@ -49,6 +49,14 @@ export const config = {
   // Background job interval
   maintenanceIntervalMs: parseInt(env('MAINTENANCE_INTERVAL_MS') || '60000', 10),
 
+  // อีเมลแจ้งเตือน — ใช้ Resend (HTTPS API · Render ฟรีบล็อกพอร์ต SMTP) · ไม่ตั้ง RESEND_API_KEY = ไม่ส่งอีเมล (แจ้งเตือนในแอปยังทำงาน)
+  email: {
+    resendApiKey: env('RESEND_API_KEY'),
+    from:         env('EMAIL_FROM'), // เช่น "Rodhare Court <onboarding@resend.dev>"
+  },
+  // ความลับของ endpoint /api/internal/cron/tick ที่ตัวตั้งเวลาภายนอกเรียก (ไม่ตั้ง = ปิด endpoint)
+  cronSecret: env('CRON_SECRET'),
+
   // บัญชีรับเงินจริงของสนาม (แสดงให้ลูกค้าโอน)
   payee: {
     accountName:   env('PAYMENT_ACCOUNT_NAME'),
@@ -78,6 +86,8 @@ export const validateConfig = (c = config): string[] => {
   if (!['lax', 'strict', 'none'].includes(c.cookieSameSite)) errors.push('COOKIE_SAMESITE ต้องเป็น lax | strict | none');
   if (Number.isNaN(c.port) || Number.isNaN(c.trustProxy) || Number.isNaN(c.maintenanceIntervalMs)) errors.push('PORT / TRUST_PROXY / MAINTENANCE_INTERVAL_MS ต้องเป็นตัวเลข');
   for (const url of c.frontendUrls) if (!/^https?:\/\/[^/]+$/.test(url)) errors.push(`FRONTEND_URL ไม่ถูกต้อง: ${url}`);
+  if (c.email.resendApiKey && !c.email.from) errors.push('ตั้ง RESEND_API_KEY แล้วต้องระบุ EMAIL_FROM ด้วย');
+  if (c.cronSecret && c.cronSecret.length < 24) errors.push('CRON_SECRET ต้องยาวอย่างน้อย 24 ตัวอักษร (สุ่มด้วย crypto.randomBytes)');
   if (c.payee.promptPayId && !/^(0\d{9}|\d{13}|\d{15})$/.test(c.payee.promptPayId.replace(/[-\s]/g, ''))) {
     errors.push('PAYMENT_PROMPTPAY_ID ต้องเป็นเบอร์มือถือ 10 หลัก / เลขบัตรหรือเลขผู้เสียภาษี 13 หลัก / e-Wallet 15 หลัก');
   }
@@ -112,7 +122,11 @@ export const BUSINESS_RULES = {
   ABUSE_EXPIRED_THRESHOLD: 5,
   MAX_ADVANCE_DAYS: 30,          // BR4: จองล่วงหน้าได้ไม่เกิน 30 วัน
   MIN_HOURS_BEFORE_CHANGE: 24,   // BR5: แก้ไขวัน/เวลาได้ก่อนเวลาใช้งานอย่างน้อย 24 ชม.
-  CHECKIN_EARLY_MINUTES: 30,     // BR8: เช็คอินก่อนเวลาเริ่มได้ไม่เกิน 30 นาที
+  // ค่าเริ่มต้นของช่วงเช็คอิน (ค่าจริงอ่านจากตาราง app_settings ที่ admin ปรับได้)
+  CHECKIN_EARLY_MINUTES: 15,     // BR8: เช็คอินก่อนเวลาเริ่มได้ไม่เกิน 15 นาที
+  CHECKIN_LATE_MINUTES: 15,      // เช็คอินหลังเวลาเริ่มได้ไม่เกิน 15 นาที เลยแล้ว = ไม่มา (NO_SHOW) ปล่อยสนามคืน
+  REMINDER_FIRST_HOURS: 24,      // แจ้งเตือนครั้งแรกก่อนเริ่ม 24 ชม. (ค่าจริงอยู่ใน app_settings)
+  REMINDER_SECOND_MINUTES: 60,   // แจ้งเตือนครั้งที่สองก่อนเริ่ม 60 นาที
   LATE_FEE_PER_BLOCK: 20,        // BR11: คืนช้า 20 บาท ต่อ 15 นาที ต่อชิ้น
   LATE_FEE_BLOCK_MINUTES: 15,
   REFUND_FULL_HOURS: 24,         // BR12: ยกเลิกล่วงหน้า > 24 ชม. คืน 100% / 1-24 ชม. คืน 50% / < 1 ชม. ไม่คืนเงิน

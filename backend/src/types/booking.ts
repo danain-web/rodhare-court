@@ -86,7 +86,8 @@ export type BookingStatus =
   | 'COMPLETED'
   | 'CANCELLED'
   | 'REFUNDED'
-  | 'EXPIRED';
+  | 'EXPIRED'
+  | 'NO_SHOW';
 
 export interface BookingDTO {
   bookingId: number;
