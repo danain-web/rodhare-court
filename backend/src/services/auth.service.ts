@@ -6,12 +6,19 @@ import { SessionRepository } from '../repositories/session.repository';
 import { insertAudit } from '../repositories/shared.repository';
 import { comparePassword, hashPassword } from '../utils/password';
 import { generateToken } from '../utils/jwt';
+import { PasswordResetRepository } from '../repositories/password-reset.repository';
 import { PermissionService } from './permission.service';
+import { config } from '../config/env';
+import { escapeHtml, sendEmail } from '../utils/email';
 import { AppError } from '../utils/appError';
 import { AuthUserPayload, UserDTO } from '../types';
 import { LoginInput, RegisterInput } from '../validators/auth.validator';
 
 const SESSION_TTL_HOURS = 24;
+const RESET_TOKEN_TTL_MINUTES = 30;
+const RESET_MAX_REQUESTS_PER_HOUR = 3; // ต่อบัญชี — กันถูกส่งอีเมลรีเซ็ตรัว ๆ
+
+const sha256 = (value: string) => crypto.createHash('sha256').update(value).digest('hex');
 
 const toDto = (user: UserRecord): UserDTO => {
   const { passwordHash: _hidden, googleSub: _hiddenSub, ...dto } = user;
@@ -22,6 +29,7 @@ export class AuthService {
   private userRepository = new UserRepository();
   private sessionRepository = new SessionRepository();
   private permissionService = new PermissionService();
+  private passwordResetRepository = new PasswordResetRepository();
 
   // แนบ permission ที่ role ของผู้ใช้มีตอนนี้ ให้ frontend ซ่อน/แสดงเมนู (backend ยังเป็นผู้ตรวจจริงทุก request)
   private async toDtoWithPermissions(user: UserRecord): Promise<UserDTO> {
@@ -192,6 +200,83 @@ export class AuthService {
     return { token, user: await this.toDtoWithPermissions(user) };
   }
 
+  // =====================================================================
+  // ลืมรหัสผ่าน: ส่งลิงก์รีเซ็ตทางอีเมล
+  // - ตอบเหมือนกันเสมอไม่ว่าอีเมลนี้มีบัญชีหรือไม่ (ไม่เปิดเผยว่าใครเป็นสมาชิก)
+  // - โทเคนสุ่ม 32 ไบต์ · เก็บเฉพาะ SHA-256 · ใช้ได้ครั้งเดียว · หมดอายุใน 30 นาที
+  // - บัญชี Google ที่ไม่มีรหัสผ่านก็ตั้งรหัสผ่านได้ด้วยลิงก์นี้ (พิสูจน์ว่าเข้าถึงอีเมลได้)
+  // =====================================================================
+  async forgotPassword(email: string, ipAddress?: string): Promise<void> {
+    const user = await withConnection((conn) => this.userRepository.findByEmail(conn, email));
+    if (!user || !user.isActive) return;
+
+    const token = crypto.randomBytes(32).toString('hex');
+    const created = await withTransaction(async (conn) => {
+      await this.passwordResetRepository.purgeExpired(conn);
+      if ((await this.passwordResetRepository.countRecent(conn, user.userId, 1)) >= RESET_MAX_REQUESTS_PER_HOUR) return false;
+      await this.passwordResetRepository.invalidateOpen(conn, user.userId);
+      await this.passwordResetRepository.create(conn, { tokenHash: sha256(token), userId: user.userId, ttlMinutes: RESET_TOKEN_TTL_MINUTES });
+      await insertAudit(conn, { userId: user.userId, action: 'REQUEST_PASSWORD_RESET', entityName: 'USERS', entityId: user.userId, ipAddress });
+      return true;
+    });
+    if (!created) return;
+
+    const link = `${config.frontendUrls[0]}/reset-password?token=${token}`;
+    try {
+      const result = await sendEmail({
+        to: user.email,
+        subject: 'รีเซ็ตรหัสผ่าน Rodhare Court',
+        text:
+          `สวัสดีคุณ ${user.firstName}\n\nมีคำขอรีเซ็ตรหัสผ่านของบัญชีนี้ กดลิงก์ด้านล่างเพื่อตั้งรหัสผ่านใหม่ (ใช้ได้ภายใน ${RESET_TOKEN_TTL_MINUTES} นาที ใช้ได้ครั้งเดียว)\n\n${link}\n\n` +
+          'ถ้าไม่ได้เป็นผู้ขอ ไม่ต้องทำอะไร รหัสผ่านเดิมยังใช้ได้ตามปกติ',
+        html:
+          `<p>สวัสดีคุณ ${escapeHtml(user.firstName)}</p>` +
+          `<p>มีคำขอรีเซ็ตรหัสผ่านของบัญชีนี้ กดปุ่มด้านล่างเพื่อตั้งรหัสผ่านใหม่ (ใช้ได้ภายใน ${RESET_TOKEN_TTL_MINUTES} นาที ใช้ได้ครั้งเดียว)</p>` +
+          `<p><a href="${link}" style="display:inline-block;padding:10px 18px;background:#0a3528;color:#fff;border-radius:8px;text-decoration:none">ตั้งรหัสผ่านใหม่</a></p>` +
+          `<p style="color:#64748b;font-size:12px">ถ้าไม่ได้เป็นผู้ขอ ไม่ต้องทำอะไร รหัสผ่านเดิมยังใช้ได้ตามปกติ</p>`,
+      });
+      // ยังไม่ได้ตั้ง RESEND_API_KEY: ตอนพัฒนาแสดงลิงก์ใน console ให้ทดสอบได้ · production ไม่พิมพ์โทเคนลง log
+      if (result === 'skipped' && !config.isProduction) console.log(`[password-reset] (ไม่ได้ตั้งค่าอีเมล) ลิงก์สำหรับ ${user.email}: ${link}`);
+      if (result === 'skipped' && config.isProduction) console.warn('[password-reset] ยังไม่ได้ตั้ง RESEND_API_KEY — ส่งอีเมลรีเซ็ตรหัสผ่านไม่ได้');
+    } catch (err) {
+      // ส่งอีเมลล้มเหลวต้องไม่เปลี่ยนคำตอบฝั่ง client (ไม่เปิดเผยว่าอีเมลมีบัญชีหรือไม่)
+      console.error('[password-reset] ส่งอีเมลไม่สำเร็จ:', (err as Error).message);
+    }
+  }
+
+  async resetPassword(token: string, newPassword: string, ipAddress?: string): Promise<void> {
+    const invalid = () => AppError.badRequest('ลิงก์รีเซ็ตรหัสผ่านไม่ถูกต้องหรือหมดอายุ กรุณาขอลิงก์ใหม่');
+    await withTransaction(async (conn) => {
+      const userId = await this.passwordResetRepository.consume(conn, sha256(token));
+      if (!userId) throw invalid();
+      const user = await this.userRepository.findById(conn, userId);
+      if (!user || !user.isActive) throw invalid();
+
+      await this.userRepository.setPasswordHash(conn, userId, await hashPassword(newPassword));
+      await this.passwordResetRepository.invalidateOpen(conn, userId);
+      // รหัสผ่านเปลี่ยน → ทุกอุปกรณ์ที่ล็อกอินค้างอยู่ต้องเข้าสู่ระบบใหม่
+      await this.sessionRepository.revokeAllForUser(conn, userId);
+      await insertAudit(conn, { userId, action: 'RESET_PASSWORD', entityName: 'USERS', entityId: userId, ipAddress });
+    });
+  }
+
+  // เปลี่ยนรหัสผ่านตอนล็อกอินอยู่: ต้องยืนยันรหัสผ่านเดิม · ออกจากระบบอุปกรณ์อื่นทั้งหมด (คง session ปัจจุบันไว้)
+  async changePassword(userId: number, sessionId: string, currentPassword: string, newPassword: string, ipAddress?: string): Promise<void> {
+    await withTransaction(async (conn) => {
+      const user = await this.userRepository.findById(conn, userId);
+      if (!user) throw AppError.notFound('ไม่พบผู้ใช้');
+      if (!user.passwordHash) {
+        throw AppError.badRequest('บัญชีนี้เข้าสู่ระบบด้วย Google และยังไม่มีรหัสผ่าน หากต้องการตั้งรหัสผ่าน ให้ใช้ "ลืมรหัสผ่าน" ที่หน้าเข้าสู่ระบบ');
+      }
+      if (!(await comparePassword(currentPassword, user.passwordHash))) throw AppError.badRequest('รหัสผ่านปัจจุบันไม่ถูกต้อง');
+      if (currentPassword === newPassword) throw AppError.badRequest('รหัสผ่านใหม่ต้องต่างจากรหัสผ่านเดิม');
+
+      await this.userRepository.setPasswordHash(conn, userId, await hashPassword(newPassword));
+      await this.sessionRepository.revokeAllForUser(conn, userId, sessionId);
+      await insertAudit(conn, { userId, action: 'CHANGE_PASSWORD', entityName: 'USERS', entityId: userId, ipAddress });
+    }, userId);
+  }
+
   // หน้าสมัครสมาชิก: ตรวจชื่อผู้ใช้/อีเมลซ้ำระหว่างพิมพ์ (ไม่สนตัวพิมพ์เล็ก/ใหญ่)
   async checkAvailability(username?: string, email?: string): Promise<{ usernameAvailable?: boolean; emailAvailable?: boolean }> {
     return withConnection(async (conn) => {
@@ -216,10 +301,8 @@ export class AuthService {
       const exists = await this.userRepository.existsUsernameOrEmail(conn, username, email);
       if (exists.username) throw AppError.conflict('ชื่อผู้ใช้นี้ถูกใช้งานแล้ว');
       if (exists.email) throw AppError.conflict('อีเมลนี้ถูกใช้งานแล้ว');
-      if (input.memberTypeId && !(await this.userRepository.memberTypeExists(conn, input.memberTypeId))) {
-        throw AppError.badRequest('ประเภทสมาชิกไม่ถูกต้อง');
-      }
-      const memberTypeId = input.memberTypeId ?? (await this.userRepository.getDefaultMemberTypeId(conn));
+      // ผู้สมัครด้วยรหัสผ่านเลือกประเภทสมาชิกเองไม่ได้ (กันอ้างสิทธิ์ส่วนลดโดยไม่มีหลักฐาน)
+      const memberTypeId = await this.userRepository.getDefaultMemberTypeId(conn);
       if (!memberTypeId) {
         throw AppError.badRequest('ฐานข้อมูลยังไม่มีข้อมูลประเภทสมาชิก กรุณาติดต่อผู้ดูแลระบบ');
       }
@@ -238,7 +321,7 @@ export class AuthService {
         action: 'REGISTER',
         entityName: 'USERS',
         entityId: userId,
-        newValues: { username, email, memberTypeId: input.memberTypeId ?? null },
+        newValues: { username, email, memberTypeId },
         ipAddress,
       });
     });

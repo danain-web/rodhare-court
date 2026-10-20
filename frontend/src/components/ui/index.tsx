@@ -259,6 +259,34 @@ export const Modal: React.FC<{ open: boolean; onClose: () => void; title: React.
   );
 };
 
+// ---------------- กล่องยืนยันการกระทำ (ลบ/ระงับ ฯลฯ) ----------------
+export const ConfirmModal: React.FC<{
+  open: boolean;
+  title: React.ReactNode;
+  message: React.ReactNode;
+  confirmLabel?: string;
+  danger?: boolean;
+  busy?: boolean;
+  error?: string;
+  onConfirm: () => void;
+  onClose: () => void;
+}> = ({ open, title, message, confirmLabel = 'ยืนยัน', danger, busy, error, onConfirm, onClose }) => (
+  <Modal open={open} onClose={onClose} title={title}>
+    <div className="space-y-4">
+      {error && <Alert tone="error" title={error} />}
+      <div className="text-sm leading-relaxed text-slate-600">{message}</div>
+      <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
+        <button type="button" onClick={onClose} className="btn-outline">
+          ยกเลิก
+        </button>
+        <button type="button" onClick={onConfirm} disabled={busy} className={danger ? 'btn-danger' : 'btn-primary'}>
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null} {confirmLabel}
+        </button>
+      </div>
+    </div>
+  </Modal>
+);
+
 // ---------------- แถวข้อมูล label : value ----------------
 export const InfoRow: React.FC<{ label: React.ReactNode; value: React.ReactNode; strong?: boolean }> = ({ label, value, strong }) => (
   <div className="flex items-start justify-between gap-4 py-1.5 text-sm">

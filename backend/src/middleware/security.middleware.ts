@@ -64,6 +64,39 @@ export const authLimiter = rateLimit({
   message: { success: false, message: 'พยายามเข้าสู่ระบบบ่อยเกินไป กรุณารอ 15 นาทีแล้วลองใหม่' },
 });
 
+// นับการล็อกอินที่ล้มเหลวต่อ "บัญชีที่ถูกลอง" (identifier) นอกเหนือจากต่อ IP — กันเดารหัสผ่านบัญชีเดียวจากหลาย IP
+// ข้อแลกเปลี่ยน: ผู้ไม่หวังดีล็อกบัญชีเหยื่อได้ชั่วคราว (15 นาที) ด้วยการกรอกรหัสผิด แต่เข้าสู่ระบบด้วย Google ได้ตามปกติ
+export const loginAccountLimiter = rateLimit({
+  windowMs: FIFTEEN_MINUTES,
+  limit: envInt('RATE_LIMIT_LOGIN_ACCOUNT_MAX', 10),
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true,
+  keyGenerator: (req) => {
+    const identifier = typeof req.body?.identifier === 'string' ? req.body.identifier.trim().toLowerCase().slice(0, 100) : '';
+    return identifier ? `acct:${identifier}` : ipKeyGenerator(req.ip || '');
+  },
+  message: { success: false, message: 'พยายามเข้าสู่ระบบบัญชีนี้บ่อยเกินไป กรุณารอ 15 นาทีแล้วลองใหม่' },
+});
+
+// ตรวจชื่อผู้ใช้/อีเมลซ้ำ (เรียกโดยไม่ต้อง login) — จำกัดต่อ IP กันไล่เดาว่ามีบัญชีใดอยู่ในระบบ
+export const availabilityLimiter = rateLimit({
+  windowMs: FIFTEEN_MINUTES,
+  limit: envInt('RATE_LIMIT_AVAILABILITY_MAX', 60),
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'ตรวจสอบบ่อยเกินไป กรุณารอสักครู่แล้วลองใหม่' },
+});
+
+// ขอลิงก์รีเซ็ตรหัสผ่าน: นับทุกคำขอ (ไม่ใช่เฉพาะที่ล้มเหลว) ต่อ IP กันใช้ส่งอีเมลรัว ๆ
+export const forgotPasswordLimiter = rateLimit({
+  windowMs: FIFTEEN_MINUTES,
+  limit: envInt('RATE_LIMIT_FORGOT_MAX', 5),
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'ขอรีเซ็ตรหัสผ่านบ่อยเกินไป กรุณารอ 15 นาทีแล้วลองใหม่' },
+});
+
 export const bookingLimiter = createUserRateLimiter({
   max: envInt('RATE_LIMIT_BOOKING_MAX', 30),
   message: 'ทำรายการจองบ่อยเกินไป กรุณารอสักครู่แล้วลองใหม่',

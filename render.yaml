@@ -31,6 +31,9 @@ services:
         value: lax
       - key: MAINTENANCE_INTERVAL_MS
         value: "60000"
+      # โหมดสาธิต: false = เจ้าหน้าที่ต้องตรวจสลิปทุกรายการ (ใช้งานจริง) · เปลี่ยนเป็น "true" เฉพาะตอนนำเสนอ/สาธิต
+      - key: PAYMENT_DEMO_MODE
+        value: "false"
       # บัญชีรับเงินจริง (ไม่ตั้ง = หน้าชำระเงินแจ้งให้ติดต่อเจ้าหน้าที่)
       - key: PAYMENT_ACCOUNT_NAME
         sync: false

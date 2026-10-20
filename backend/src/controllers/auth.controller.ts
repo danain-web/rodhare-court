@@ -1,6 +1,14 @@
 import { Request, Response } from 'express';
 import { AuthService } from '../services/auth.service';
-import { availabilitySchema, googleCredentialSchema, loginSchema, registerSchema } from '../validators/auth.validator';
+import {
+  availabilitySchema,
+  changePasswordSchema,
+  forgotPasswordSchema,
+  googleCredentialSchema,
+  loginSchema,
+  registerSchema,
+  resetPasswordSchema,
+} from '../validators/auth.validator';
 import { sendSuccess } from '../utils/response';
 import { currentUser } from './helpers';
 import { COOKIE_NAME, cookieOptions } from '../utils/jwt';
@@ -44,6 +52,26 @@ export class AuthController {
     const user = currentUser(req);
     const { credential } = googleCredentialSchema.parse(req.body);
     return sendSuccess(res, await this.authService.linkGoogle(user.userId, credential, req.ip), 'เชื่อมบัญชี Google สำเร็จ');
+  };
+
+  // ตอบข้อความเดียวกันเสมอ ไม่ว่าอีเมลนี้จะมีบัญชีหรือไม่
+  forgotPassword = async (req: Request, res: Response) => {
+    const { email } = forgotPasswordSchema.parse(req.body);
+    await this.authService.forgotPassword(email, req.ip);
+    return sendSuccess(res, { success: true }, 'หากอีเมลนี้มีบัญชีอยู่ในระบบ เราได้ส่งลิงก์รีเซ็ตรหัสผ่านไปให้แล้ว (ลิงก์ใช้ได้ 30 นาที)');
+  };
+
+  resetPassword = async (req: Request, res: Response) => {
+    const { token, password } = resetPasswordSchema.parse(req.body);
+    await this.authService.resetPassword(token, password, req.ip);
+    return sendSuccess(res, { success: true }, 'ตั้งรหัสผ่านใหม่เรียบร้อย กรุณาเข้าสู่ระบบด้วยรหัสผ่านใหม่');
+  };
+
+  changePassword = async (req: Request, res: Response) => {
+    const user = currentUser(req);
+    const { currentPassword, newPassword } = changePasswordSchema.parse(req.body);
+    await this.authService.changePassword(user.userId, user.sessionId, currentPassword, newPassword, req.ip);
+    return sendSuccess(res, { success: true }, 'เปลี่ยนรหัสผ่านเรียบร้อย อุปกรณ์อื่นที่เข้าสู่ระบบอยู่ถูกออกจากระบบแล้ว');
   };
 
   checkAvailability = async (req: Request, res: Response) => {

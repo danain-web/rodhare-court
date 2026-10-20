@@ -53,6 +53,11 @@ export class SessionRepository {
     await conn.query(`DELETE FROM user_sessions WHERE session_id = $1`, [sessionId]);
   }
 
+  // ยกเลิก session ทั้งหมดของผู้ใช้ (ยกเว้น session ปัจจุบันถ้าระบุ) — ใช้ตอนเปลี่ยนรหัสผ่าน ระงับบัญชี หรือเปลี่ยนบทบาท
+  async revokeAllForUser(conn: DbConnection, userId: number, exceptSessionId?: string): Promise<void> {
+    await conn.query(`DELETE FROM user_sessions WHERE user_id = $1 AND session_id IS DISTINCT FROM $2`, [userId, exceptSessionId ?? null]);
+  }
+
   async purgeExpired(conn: DbConnection): Promise<void> {
     await conn.query(`DELETE FROM user_sessions WHERE expires_at < NOW()`);
   }

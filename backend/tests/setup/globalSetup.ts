@@ -64,6 +64,7 @@ export default async function globalSetup(): Promise<void> {
     // เทสต์ทั่วไปยิงคำขอจำนวนมากจากผู้ใช้เดียว → ยกเพดาน · พฤติกรรม limiter ทดสอบแยกใน security.test.ts
     RATE_LIMIT_BOOKING_MAX: '1000',
     RATE_LIMIT_PAYMENT_MAX: '1000',
+    RATE_LIMIT_FORGOT_MAX: '1000',
     // บัญชีรับเงินสำหรับเทสต์ (ค่าทดสอบ ไม่ใช่บัญชีจริง)
     PAYMENT_ACCOUNT_NAME: 'Rodhare Court (test)',
     PAYMENT_PROMPTPAY_ID: '0812345678',

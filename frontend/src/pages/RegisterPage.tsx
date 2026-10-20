@@ -1,12 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
-import { checkAvailabilityApi, getMemberTypesPublicApi, googleLoginApi, registerApi } from '../services/auth';
+import { checkAvailabilityApi, googleLoginApi, registerApi } from '../services/auth';
 import { BrandMark } from '../components/Navbar';
 import { GoogleSignInButton } from '../components/GoogleSignInButton';
 import { Alert } from '../components/ui';
-import { CheckCircle2, GraduationCap, Loader2, UserPlus, Users, Briefcase, XCircle } from 'lucide-react';
+import { CheckCircle2, Loader2, UserPlus, XCircle } from 'lucide-react';
 
 type Check = { state: 'idle' | 'checking' | 'ok' | 'taken' | 'invalid'; msg?: string };
 
@@ -55,11 +54,7 @@ const Hint: React.FC<{ check: Check }> = ({ check }) => {
   );
 };
 
-const MEMBER_ICON: Record<string, React.ReactNode> = {
-  EXTERNAL: <Users className="h-5 w-5" />,
-  STUDENT: <GraduationCap className="h-5 w-5" />,
-  PERSONNEL: <Briefcase className="h-5 w-5" />,
-};
+const MIN_PASSWORD_LENGTH = 10;
 
 // หน้าสมัครสมาชิก (Customer Registration)
 export const RegisterPage: React.FC = () => {
@@ -75,21 +70,13 @@ export const RegisterPage: React.FC = () => {
     lastName: '',
     phone: '',
   });
-  const [memberTypeId, setMemberTypeId] = useState<number | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const { data: memberTypes = [] } = useQuery({ queryKey: ['memberTypesPublic'], queryFn: getMemberTypesPublicApi });
-  useEffect(() => {
-    if (memberTypeId === null && memberTypes.length) {
-      setMemberTypeId((memberTypes.find((m) => m.typeName === 'EXTERNAL') || memberTypes[0]).memberTypeId);
-    }
-  }, [memberTypes]);
 
   const usernameCheck = useAvailability('username', form.username, (v) => USERNAME_RE.test(v), 'ใช้ได้เฉพาะ a-z, 0-9, _ . - (3-50 ตัวอักษร)');
   const emailCheck = useAvailability('email', form.email, (v) => EMAIL_RE.test(v), 'รูปแบบอีเมลไม่ถูกต้อง');
 
-  const passwordTooShort = form.password.length > 0 && form.password.length < 6;
+  const passwordTooShort = form.password.length > 0 && form.password.length < MIN_PASSWORD_LENGTH;
   const passwordMismatch = form.confirmPassword.length > 0 && form.password !== form.confirmPassword;
 
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) => setForm((f) => ({ ...f, [k]: e.target.value }));
@@ -101,8 +88,8 @@ export const RegisterPage: React.FC = () => {
       setErrorMessage('ชื่อผู้ใช้หรืออีเมลถูกใช้งานแล้ว กรุณาเปลี่ยนใหม่');
       return;
     }
-    if (form.password.length < 6) {
-      setErrorMessage('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร');
+    if (form.password.length < MIN_PASSWORD_LENGTH) {
+      setErrorMessage(`รหัสผ่านต้องมีอย่างน้อย ${MIN_PASSWORD_LENGTH} ตัวอักษร`);
       return;
     }
     if (form.password !== form.confirmPassword) {
@@ -118,7 +105,6 @@ export const RegisterPage: React.FC = () => {
         firstName: form.firstName.trim(),
         lastName: form.lastName.trim(),
         phone: form.phone.trim() || undefined,
-        memberTypeId: memberTypeId ?? undefined,
       });
       // สมัครสำเร็จ -> เข้าสู่ระบบให้อัตโนมัติ แล้วไปหน้าค้นหาสนาม
       login(data.user);
@@ -194,7 +180,7 @@ export const RegisterPage: React.FC = () => {
               <input required className="input" value={form.lastName} onChange={set('lastName')} autoComplete="family-name" />
             </div>
             <div>
-              <label className="label">รหัสผ่าน * (อย่างน้อย 6 ตัวอักษร)</label>
+              <label className="label">รหัสผ่าน * (อย่างน้อย {MIN_PASSWORD_LENGTH} ตัวอักษร)</label>
               <input required type="password" className="input" value={form.password} onChange={set('password')} autoComplete="new-password" />
               {passwordTooShort && <div className="mt-1 text-[11px] text-rose-600">รหัสผ่านสั้นเกินไป</div>}
             </div>
@@ -209,33 +195,9 @@ export const RegisterPage: React.FC = () => {
             </div>
           </div>
 
-          <div>
-            <label className="label">ประเภทสมาชิก (ใช้คำนวณส่วนลดค่าบริการ)</label>
-            <div className="grid gap-3 sm:grid-cols-3">
-              {memberTypes.map((m) => {
-                const active = memberTypeId === m.memberTypeId;
-                return (
-                  <button
-                    type="button"
-                    key={m.memberTypeId}
-                    onClick={() => setMemberTypeId(m.memberTypeId)}
-                    className={`flex items-center gap-3 rounded-xl p-3 text-left transition ${
-                      active ? 'bg-forest-900 text-white ring-2 ring-mint-300' : 'bg-panel text-forest-950 hover:ring-2 hover:ring-mint-200'
-                    }`}
-                  >
-                    <span className={active ? 'text-mint-300' : 'text-forest-700'}>{MEMBER_ICON[m.typeName] || <Users className="h-5 w-5" />}</span>
-                    <span>
-                      <span className="block text-sm font-semibold">{m.displayName}</span>
-                      <span className={`block text-[11px] ${active ? 'text-mint-200' : 'text-slate-500'}`}>
-                        {m.discountPercent > 0 ? `ส่วนลด ${m.discountPercent}%` : 'ราคาปกติ'}
-                      </span>
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-            <p className="mt-2 text-[11px] text-slate-500">นักศึกษา/บุคลากร อาจถูกขอตรวจบัตรที่เคาน์เตอร์ตอนเช็คอิน</p>
-          </div>
+          <p className="rounded-xl bg-panel p-3 text-[11px] text-slate-600">
+            สมัครด้วยรหัสผ่านจะเป็นสมาชิกประเภทบุคคลภายนอก (ราคาปกติ) · สิทธิ์ส่วนลดนักศึกษา/บุคลากรได้รับเมื่อสมัครหรือเชื่อมบัญชี Google ที่ใช้อีเมลของมหาวิทยาลัย
+          </p>
 
           <button type="submit" disabled={blocked} className="btn-primary w-full py-3">
             {isSubmitting ? (

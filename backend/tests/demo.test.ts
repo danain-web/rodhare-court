@@ -84,14 +84,36 @@ describe('Payment demo mode', () => {
     expect(booking.rows[0].status).toBe('CONFIRMED');
   });
 
-  it('ไม่ได้ตั้ง PAYMENT_DEMO_MODE → โหมดสาธิตเปิดเป็นค่าเริ่มต้น', () => {
+  // อ่านค่า config.paymentDemoMode ใน process ใหม่ด้วย env ที่กำหนด (config อ่าน env ตอน import)
+  const demoModeWith = (overrides: Record<string, string>): string => {
     const script = `require('./src/config/env').config.paymentDemoMode`;
     const out = require('child_process').execFileSync(process.execPath, ['--import', 'tsx', '-p', script], {
       cwd: require('path').resolve(__dirname, '..'),
-      env: { ...process.env, PAYMENT_DEMO_MODE: '' },
+      env: { ...process.env, ...overrides },
       encoding: 'utf8',
     });
-    expect(out.trim()).toBe('true');
+    return out.trim();
+  };
+
+  it('ไม่ได้ตั้ง PAYMENT_DEMO_MODE นอก production → โหมดสาธิตเปิดเป็นค่าเริ่มต้น', () => {
+    expect(demoModeWith({ PAYMENT_DEMO_MODE: '' })).toBe('true');
+  });
+
+  // ตั้งค่าที่ production ต้องมี เพื่อให้ validateConfig ผ่าน แล้วดูเฉพาะผลของ PAYMENT_DEMO_MODE
+  const productionEnv = {
+    NODE_ENV: 'production',
+    DATABASE_SSL: 'true',
+    FRONTEND_URL: 'https://example.com',
+    SUPABASE_URL: 'https://storage.test.invalid',
+    SUPABASE_SERVICE_ROLE_KEY: 'test-service-role-key-not-used',
+  };
+
+  it('production ไม่ได้ตั้ง PAYMENT_DEMO_MODE → ปิด (fail-closed)', () => {
+    expect(demoModeWith({ ...productionEnv, PAYMENT_DEMO_MODE: '' })).toBe('false');
+  });
+
+  it('production ตั้ง PAYMENT_DEMO_MODE=true อย่างชัดเจน → เปิด', () => {
+    expect(demoModeWith({ ...productionEnv, PAYMENT_DEMO_MODE: 'true' })).toBe('true');
   });
 
   it('ยอดไม่ตรง → ปฏิเสธ แม้อยู่ในโหมดสาธิต', async () => {

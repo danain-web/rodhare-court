@@ -1,13 +1,72 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { linkGoogleApi } from '../services/auth';
+import { changePasswordApi, linkGoogleApi } from '../services/auth';
 import { GoogleSignInButton } from '../components/GoogleSignInButton';
 import { CustomerLayout } from '../components/layout/CustomerLayout';
 import { StaffLayout } from '../components/layout/StaffLayout';
-import { PageHeader, formatDateTime } from '../components/ui';
-import { Calendar, CheckCircle2, IdCard, Key, Link2, Lock, Mail, Phone, ShieldCheck } from 'lucide-react';
+import { Alert, PageHeader, apiErrorMessage, formatDateTime } from '../components/ui';
+import { Calendar, CheckCircle2, IdCard, Key, KeyRound, Link2, Loader2, Lock, Mail, Phone, ShieldCheck } from 'lucide-react';
 
 const GOOGLE_ENABLED = !!import.meta.env.VITE_GOOGLE_CLIENT_ID;
+const MIN_PASSWORD_LENGTH = 10;
+
+// เปลี่ยนรหัสผ่านตอนล็อกอินอยู่ — ต้องยืนยันรหัสผ่านปัจจุบัน และอุปกรณ์อื่นจะถูกออกจากระบบ
+const ChangePasswordCard: React.FC = () => {
+  const [current, setCurrent] = useState('');
+  const [next, setNext] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setMsg(null);
+    if (next.length < MIN_PASSWORD_LENGTH) return setMsg({ tone: 'error', text: `รหัสผ่านใหม่ต้องมีอย่างน้อย ${MIN_PASSWORD_LENGTH} ตัวอักษร` });
+    if (next !== confirm) return setMsg({ tone: 'error', text: 'ยืนยันรหัสผ่านใหม่ไม่ตรงกัน' });
+    setSaving(true);
+    try {
+      setMsg({ tone: 'success', text: await changePasswordApi(current, next) });
+      setCurrent('');
+      setNext('');
+      setConfirm('');
+    } catch (err) {
+      setMsg({ tone: 'error', text: apiErrorMessage(err) });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="border-t border-slate-100 pt-4">
+      <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-slate-600">
+        <KeyRound className="h-4 w-4" /> เปลี่ยนรหัสผ่าน
+      </div>
+      <form onSubmit={submit} className="space-y-3 rounded-xl bg-panel p-3">
+        {msg && <Alert tone={msg.tone} title={msg.text} onClose={() => setMsg(null)} />}
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div>
+            <label className="label">รหัสผ่านปัจจุบัน</label>
+            <input required type="password" className="input bg-white" value={current} onChange={(e) => setCurrent(e.target.value)} autoComplete="current-password" />
+          </div>
+          <div>
+            <label className="label">รหัสผ่านใหม่ (อย่างน้อย {MIN_PASSWORD_LENGTH} ตัว)</label>
+            <input required type="password" className="input bg-white" value={next} onChange={(e) => setNext(e.target.value)} autoComplete="new-password" />
+          </div>
+          <div>
+            <label className="label">ยืนยันรหัสผ่านใหม่</label>
+            <input required type="password" className="input bg-white" value={confirm} onChange={(e) => setConfirm(e.target.value)} autoComplete="new-password" />
+          </div>
+        </div>
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-[11px] text-slate-500">เปลี่ยนแล้วอุปกรณ์อื่นที่เข้าสู่ระบบอยู่จะถูกออกจากระบบ · บัญชีที่เข้าด้วย Google อย่างเดียวให้ใช้ "ลืมรหัสผ่าน" ที่หน้าเข้าสู่ระบบเพื่อตั้งรหัสผ่าน</p>
+          <button type="submit" disabled={saving} className="btn-primary shrink-0">
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null} บันทึก
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+};
 
 // โปรไฟล์ผู้ใช้ (ไม่มี Prototype — ออกแบบตาม Design System เดียวกัน)
 export const ProfilePage: React.FC = () => {
@@ -96,6 +155,8 @@ export const ProfilePage: React.FC = () => {
               )}
             </div>
           )}
+
+          <ChangePasswordCard />
 
           {/* Session JWT อยู่ใน httpOnly Cookie — JavaScript อ่านไม่ได้ (ป้องกัน XSS) จึงไม่แสดง token บนหน้า */}
           <div className="border-t border-slate-100 pt-4">

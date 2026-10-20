@@ -51,6 +51,36 @@ describe('Auth Flow (Register → Login → Me → Logout)', () => {
     expect(Array.isArray(res.body.details)).toBe(true);
   });
 
+  it('POST /api/auth/register รหัสผ่านสั้นกว่า 10 ตัว → 400', async () => {
+    const weak = { ...makeTestUser('jest_weak'), password: '123456789' };
+    const res = await request(app).post('/api/auth/register').send(weak);
+    expect(res.status).toBe(400);
+  });
+
+  it('POST /api/auth/register ส่ง memberTypeId ของนักศึกษา → ถูกเมิน ได้ประเภทบุคคลภายนอก (กันอ้างสิทธิ์ส่วนลด)', async () => {
+    const student = (await pool.query(`SELECT member_type_id FROM member_types WHERE type_name = 'STUDENT'`)).rows[0].member_type_id;
+    const claimant = makeTestUser('jest_claim');
+    const res = await request(app).post('/api/auth/register').send({ ...claimant, memberTypeId: student });
+    createdUsernames.push(claimant.username);
+    expect(res.status).toBe(201);
+    const row = (await pool.query(
+      `SELECT mt.type_name FROM users u JOIN member_types mt ON mt.member_type_id = u.member_type_id WHERE u.username = $1`,
+      [claimant.username]
+    )).rows[0];
+    expect(row.type_name).toBe('EXTERNAL');
+  });
+
+  it('POST /api/auth/login ล้มเหลวเกิน 10 ครั้งต่อบัญชี → 429 (เพดานต่อบัญชี แยกจากเพดานต่อ IP ที่ 20)', async () => {
+    const target = makeTestUser('jest_lock').username;
+    const codes: number[] = [];
+    for (let i = 0; i < 12; i++) {
+      const res = await request(app).post('/api/auth/login').send({ identifier: target, password: 'wrong-password' });
+      codes.push(res.status);
+    }
+    expect(codes.slice(0, 10).every((c) => c === 401)).toBe(true);
+    expect(codes[10]).toBe(429);
+  });
+
   it('POST /api/auth/login รหัสผ่านผิด → 401 และไม่ตั้ง Cookie', async () => {
     const res = await request(app)
       .post('/api/auth/login')

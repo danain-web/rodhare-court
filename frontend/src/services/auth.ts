@@ -13,7 +13,6 @@ export const registerApi = async (data: {
   firstName: string;
   lastName: string;
   phone?: string;
-  memberTypeId?: number;
 }) => {
   const response = await api.post('/auth/register', data);
   return response.data.data;
@@ -29,6 +28,22 @@ export const googleLoginApi = async (credential: string) => {
 export const linkGoogleApi = async (credential: string): Promise<UserDTO> => {
   const response = await api.post('/auth/google/link', { credential });
   return response.data.data;
+};
+
+// ลืมรหัสผ่าน: ขอลิงก์รีเซ็ตทางอีเมล (ตอบสำเร็จเสมอ ไม่บอกว่าอีเมลนี้มีบัญชีหรือไม่)
+export const forgotPasswordApi = async (email: string): Promise<string> => {
+  const response = await api.post('/auth/forgot-password', { email });
+  return response.data.message;
+};
+
+export const resetPasswordApi = async (token: string, password: string): Promise<string> => {
+  const response = await api.post('/auth/reset-password', { token, password });
+  return response.data.message;
+};
+
+export const changePasswordApi = async (currentPassword: string, newPassword: string): Promise<string> => {
+  const response = await api.post('/auth/change-password', { currentPassword, newPassword });
+  return response.data.message;
 };
 
 // ตรวจชื่อผู้ใช้/อีเมลซ้ำ (ไม่สนตัวพิมพ์เล็ก/ใหญ่)

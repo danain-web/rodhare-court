@@ -70,8 +70,9 @@ export const config = {
   },
 
   // โหมดสาธิต (สำหรับนำเสนอ): แสดง QR จำลอง (ถ้ายังไม่มีบัญชีจริง) + อนุมัติสลิปที่ยอดตรงให้อัตโนมัติทันที
-  // เปิดเป็นค่าเริ่มต้น · ระบบรับเงินจริงต้องตั้ง PAYMENT_DEMO_MODE=false เพื่อให้เจ้าหน้าที่ตรวจทุกรายการ
-  paymentDemoMode: env('PAYMENT_DEMO_MODE') !== 'false',
+  // ไม่ตั้งค่า: เปิดเฉพาะนอก production (dev/test) · production ต้องตั้ง PAYMENT_DEMO_MODE=true เองอย่างชัดเจนจึงจะเปิด
+  // เหตุผล: ถ้าค่าเริ่มต้นเป็น "เปิด" แล้วลืมตั้ง false บน production ใครก็จองแล้วได้ใบเสร็จโดยไม่ต้องจ่ายเงิน (fail-open)
+  paymentDemoMode: isProduction ? env('PAYMENT_DEMO_MODE') === 'true' : env('PAYMENT_DEMO_MODE') !== 'false',
 };
 
 // =====================================================================

@@ -32,7 +32,7 @@ third-party cookie จะไม่ทิ้ง `auth_token` ทำให้ Logi
 | `FRONTEND_URL` | `https://rodhare-court.vercel.app` | **ต้องตรงกับโดเมนหน้าเว็บทุกตัวอักษร** (ใช้ตรวจ CSRF) · คั่นหลายค่าด้วย `,` |
 | `TRUST_PROXY` | `2` | Vercel + Render = 2 hop → Rate limit เห็น IP จริง |
 | `MAINTENANCE_INTERVAL_MS` | `60000` | งานยกเลิกการจองค้างชำระ |
-| `PAYMENT_DEMO_MODE` | ไม่ตั้ง / `true` / `false` | โหมดสาธิต: อนุมัติสลิปที่ยอดตรงอัตโนมัติ · **ไม่ตั้ง = เปิด** · ระบบรับเงินจริงตั้ง `false` |
+| `PAYMENT_DEMO_MODE` | ไม่ตั้ง / `true` / `false` | โหมดสาธิต: อนุมัติสลิปที่ยอดตรงอัตโนมัติ · **ไม่ตั้ง = เปิดเฉพาะนอก production, ปิดใน production** (ต้องตั้ง `true` เองจึงจะเปิดตอนนำเสนอ) · ระบบรับเงินจริงตั้ง `false` (`render.yaml` ตั้งไว้ให้แล้ว) |
 | `PAYMENT_ACCOUNT_NAME` | ชื่อบัญชีจริง | ใช้คู่กับ `PAYMENT_PROMPTPAY_ID` / เลขบัญชี |
 | `PAYMENT_PROMPTPAY_ID` | เบอร์/เลขผู้เสียภาษีพร้อมเพย์จริง | ใช้สร้าง PromptPay QR พร้อมยอด |
 | `PAYMENT_BANK_NAME` / `PAYMENT_BANK_ACCOUNT_NO` | ธนาคาร / เลขบัญชีจริง | ไม่บังคับ |
@@ -48,6 +48,9 @@ third-party cookie จะไม่ทิ้ง `auth_token` ทำให้ Logi
    - `002_booking_no_overlap_constraint.sql` — กันจองซ้อนที่ระดับฐานข้อมูล (รัน query ตรวจท้ายไฟล์ก่อน ต้องได้ 0 แถว)
    - `003_enable_row_level_security.sql` — เปิด RLS ทุกตาราง (ปิดการอ่านข้อมูลผ่าน REST API ด้วย anon key)
    - `004_allow_demo_auto_approval.sql` — อนุญาตให้โหมดสาธิตอนุมัติสลิปอัตโนมัติ
+   - `005`–`008` — สิทธิ์ใน DB, ไม่มาใช้บริการ/ตั้งค่า, แจ้งเตือน/อีเมล, เข้าสู่ระบบด้วย Google (รายละเอียดใน `docs/`)
+   - `009_password_reset_and_user_management.sql` — ตารางโทเคนรีเซ็ตรหัสผ่าน + สิทธิ์ `user.manage` (หน้า "จัดการผู้ใช้" ของ ADMIN) · **ต้องรันก่อน deploy โค้ดชุดนี้** ไม่งั้นลืมรหัสผ่านจะ error และไม่เห็นเมนูจัดการผู้ใช้
+   - ลิงก์รีเซ็ตรหัสผ่านส่งทางอีเมล: ต้องตั้ง `RESEND_API_KEY` + `EMAIL_FROM` (ดู `docs/NOTIFICATIONS_SETUP.md`) และ `FRONTEND_URL` ตัวแรกต้องเป็นโดเมนเว็บจริง (ใช้สร้างลิงก์ในอีเมล)
 2. **Storage → bucket `slips` → Edit bucket → ปิด Public bucket** (สลิปเป็นข้อมูลส่วนบุคคล — ระบบออก Signed URL อายุสั้นให้เฉพาะเจ้าของการจองและเจ้าหน้าที่)
 3. **Advisors → Security Advisor** → ตรวจว่าไม่เหลือคำเตือน RLS
 

@@ -25,6 +25,11 @@ export const equipmentAdminSchema = z.object({
   replacementCost: z.number().min(0, 'ราคาประเมินต้องไม่ติดลบ'),
 });
 
+// แก้ไขอุปกรณ์: จำนวนทั้งหมดเป็น 0 ได้ (เลิกใช้งานรายการโดยไม่ลบประวัติการจอง/ยืม)
+export const equipmentUpdateSchema = equipmentAdminSchema.extend({
+  totalQuantity: z.number().int().min(0, 'จำนวนทั้งหมดต้องไม่ติดลบ'),
+});
+
 export const promotionAdminSchema = z
   .object({
     code: z.string().trim().min(3, 'โค้ดต้องมีอย่างน้อย 3 ตัวอักษร').max(50).toUpperCase(),
@@ -55,5 +60,6 @@ export const pricingRateSchema = z.object({
 
 export type CreateSportInput = z.infer<typeof sportSchema>;
 export type CreateEquipmentInput = z.infer<typeof equipmentAdminSchema>;
+export type UpdateEquipmentInput = z.infer<typeof equipmentUpdateSchema>;
 export type CreatePromotionInput = z.infer<typeof promotionAdminSchema>;
 export type CreatePricingRateInput = z.infer<typeof pricingRateSchema>;

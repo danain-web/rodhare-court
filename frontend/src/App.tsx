@@ -6,6 +6,8 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { PageLoading } from './components/PageLoading';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
+import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
+import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { CourtsListPage } from './pages/CourtsListPage';
 import { CourtDetailPage } from './pages/CourtDetailPage';
 
@@ -17,6 +19,7 @@ const AdminCourtsPage = lazy(() => import('./pages/AdminCourtsPage').then((m) =>
 const AdminPromotionsPage = lazy(() => import('./pages/AdminPromotionsPage').then((m) => ({ default: m.AdminPromotionsPage })));
 const AdminEquipmentPage = lazy(() => import('./pages/AdminEquipmentPage').then((m) => ({ default: m.AdminEquipmentPage })));
 const AdminSettingsPage = lazy(() => import('./pages/AdminSettingsPage').then((m) => ({ default: m.AdminSettingsPage })));
+const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage').then((m) => ({ default: m.AdminUsersPage })));
 const AdminRolesPage = lazy(() => import('./pages/AdminRolesPage').then((m) => ({ default: m.AdminRolesPage })));
 const AdminAuditLogsPage = lazy(() => import('./pages/AdminAuditLogsPage').then((m) => ({ default: m.AdminAuditLogsPage })));
 const CreateBookingPage = lazy(() => import('./pages/CreateBookingPage').then((m) => ({ default: m.CreateBookingPage })));
@@ -42,7 +45,9 @@ export const App: React.FC = () => {
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
-            
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
+
             {/* Public Court Routes */}
             <Route path="/courts" element={<CourtsListPage />} />
             <Route path="/courts/:id" element={<CourtDetailPage />} />
@@ -217,6 +222,15 @@ export const App: React.FC = () => {
               element={
                 <ProtectedRoute permission="settings.manage">
                   <AdminSettingsPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/admin/users"
+              element={
+                <ProtectedRoute permission="user.manage">
+                  <AdminUsersPage />
                 </ProtectedRoute>
               }
             />

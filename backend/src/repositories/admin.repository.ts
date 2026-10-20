@@ -77,6 +77,21 @@ export class AdminRepository {
     return firstInsertId(res.rows, 'sport_type_id');
   }
 
+  async getSportById(conn: DbConnection, sportTypeId: number): Promise<SportTypeDTO | null> {
+    return (await this.getSports(conn)).find((s) => s.sportTypeId === sportTypeId) ?? null;
+  }
+
+  async updateSport(conn: DbConnection, sportTypeId: number, data: { name: string; description?: string; isActive: boolean }): Promise<void> {
+    await conn.query(
+      `UPDATE sport_types SET name = $2, description = $3, is_active = $4, updated_at = NOW() WHERE sport_type_id = $1`,
+      [sportTypeId, data.name.trim().toUpperCase(), data.description || null, data.isActive]
+    );
+  }
+
+  async deleteSport(conn: DbConnection, sportTypeId: number): Promise<void> {
+    await conn.query(`DELETE FROM sport_types WHERE sport_type_id = $1`, [sportTypeId]);
+  }
+
   // =====================================================================
   // Equipment
   // =====================================================================
@@ -120,6 +135,33 @@ export class AdminRepository {
     return list.find((e) => e.equipmentId === equipmentId) || null;
   }
 
+  // ล็อกแถวอุปกรณ์ก่อนปรับจำนวน กันชนกับการจอง/ยืมที่เกิดพร้อมกัน
+  async lockEquipment(conn: DbConnection, equipmentId: number): Promise<void> {
+    await conn.query(`SELECT 1 FROM equipment WHERE equipment_id = $1 FOR UPDATE`, [equipmentId]);
+  }
+
+  // ปรับจำนวนทั้งหมด → ปรับจำนวนว่างตามส่วนต่าง (ชิ้นที่ถูกจอง/ยืมอยู่ไม่เปลี่ยน)
+  // ใน UPDATE ของ PostgreSQL ฝั่งขวาของ SET อ่านค่าเดิมของแถว จึงใช้ total_quantity เดิมคำนวณส่วนต่างได้ถูกต้อง
+  async updateEquipment(
+    conn: DbConnection,
+    equipmentId: number,
+    data: { sportTypeId: number; name: string; totalQuantity: number; rentalFee: number; depositFee?: number; fineRatePerDay?: number; replacementCost: number }
+  ): Promise<void> {
+    await conn.query(
+      `UPDATE equipment
+          SET sport_type_id = $2, name = $3,
+              available_quantity = available_quantity + ($4 - total_quantity),
+              total_quantity = $4,
+              rental_fee = $5, deposit_fee = $6, fine_rate_per_day = $7, replacement_cost = $8, updated_at = NOW()
+        WHERE equipment_id = $1`,
+      [equipmentId, data.sportTypeId, data.name.trim(), data.totalQuantity, data.rentalFee, data.depositFee ?? 0, data.fineRatePerDay ?? 0, data.replacementCost]
+    );
+  }
+
+  async deleteEquipment(conn: DbConnection, equipmentId: number): Promise<void> {
+    await conn.query(`DELETE FROM equipment WHERE equipment_id = $1`, [equipmentId]);
+  }
+
   // =====================================================================
   // Promotions (BR14, BR15)
   // =====================================================================
@@ -140,6 +182,25 @@ export class AdminRepository {
        data.startDate, data.endDate, data.startTime || null, data.endTime || null, data.isActive !== false]
     );
     return firstInsertId(res.rows, 'promotion_id');
+  }
+
+  async updatePromotion(
+    conn: DbConnection,
+    promotionId: number,
+    data: { code: string; title: string; discountType: 'PERCENT' | 'FIXED'; discountValue: number; minBookingHours: number; startDate: string; endDate: string; startTime?: string; endTime?: string; isActive?: boolean }
+  ): Promise<void> {
+    await conn.query(
+      `UPDATE promotions
+          SET code = $2, title = $3, discount_type = $4, discount_value = $5, min_booking_hours = $6,
+              start_date = $7::DATE, end_date = $8::DATE, start_time = $9, end_time = $10, is_active = $11, updated_at = NOW()
+        WHERE promotion_id = $1`,
+      [promotionId, data.code.trim().toUpperCase(), data.title.trim(), data.discountType, data.discountValue, data.minBookingHours,
+       data.startDate, data.endDate, data.startTime || null, data.endTime || null, data.isActive !== false]
+    );
+  }
+
+  async deletePromotion(conn: DbConnection, promotionId: number): Promise<void> {
+    await conn.query(`DELETE FROM promotions WHERE promotion_id = $1`, [promotionId]);
   }
 
   async getPromotionById(conn: DbConnection, promotionId: number): Promise<PromotionAdminDTO | null> {
@@ -180,7 +241,8 @@ export class AdminRepository {
   // PostgreSQL: ใช้ IS NOT DISTINCT FROM แทน NVL(col, -1) = NVL(:val, -1) ของ Oracle
   async findOverlappingRate(
     conn: DbConnection,
-    data: { courtId?: number; sportTypeId?: number; memberTypeId?: number; dayType: string; startTime: string; endTime: string }
+    data: { courtId?: number; sportTypeId?: number; memberTypeId?: number; dayType: string; startTime: string; endTime: string },
+    excludeRateId?: number // ตอนแก้ไข: ไม่นับอัตราที่กำลังแก้ว่าทับตัวเอง
   ): Promise<number | null> {
     const res = await conn.query<{ rate_id: number }>(
       `SELECT rate_id FROM pricing_rates
@@ -189,10 +251,32 @@ export class AdminRepository {
           AND member_type_id IS NOT DISTINCT FROM $3
           AND day_type = $4
           AND start_time < $5 AND end_time > $6
+          AND rate_id IS DISTINCT FROM $7
         LIMIT 1`,
-      [data.courtId ?? null, data.courtId ? null : data.sportTypeId ?? null, data.memberTypeId ?? null, data.dayType, data.endTime, data.startTime]
+      [data.courtId ?? null, data.courtId ? null : data.sportTypeId ?? null, data.memberTypeId ?? null, data.dayType, data.endTime, data.startTime, excludeRateId ?? null]
     );
     return res.rows[0]?.rate_id ?? null;
+  }
+
+  async getPricingRateById(conn: DbConnection, rateId: number): Promise<PricingRateDTO | null> {
+    return (await this.getPricingRates(conn)).find((r) => r.rateId === rateId) ?? null;
+  }
+
+  async updatePricingRate(
+    conn: DbConnection,
+    rateId: number,
+    data: { courtId?: number; sportTypeId?: number; memberTypeId?: number; dayType: string; startTime: string; endTime: string; hourlyRate: number }
+  ): Promise<void> {
+    await conn.query(
+      `UPDATE pricing_rates
+          SET court_id = $2, sport_type_id = $3, member_type_id = $4, day_type = $5, start_time = $6, end_time = $7, hourly_rate = $8, updated_at = NOW()
+        WHERE rate_id = $1`,
+      [rateId, data.courtId ?? null, data.courtId ? null : data.sportTypeId ?? null, data.memberTypeId ?? null, data.dayType, data.startTime, data.endTime, data.hourlyRate]
+    );
+  }
+
+  async deletePricingRate(conn: DbConnection, rateId: number): Promise<void> {
+    await conn.query(`DELETE FROM pricing_rates WHERE rate_id = $1`, [rateId]);
   }
 
   async createPricingRate(

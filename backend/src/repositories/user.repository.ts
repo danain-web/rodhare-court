@@ -83,6 +83,10 @@ export class UserRepository {
     await conn.query(`UPDATE users SET google_sub = $1, updated_at = NOW() WHERE user_id = $2`, [googleSub, userId]);
   }
 
+  async setPasswordHash(conn: DbConnection, userId: number, passwordHash: string): Promise<void> {
+    await conn.query(`UPDATE users SET password_hash = $1, updated_at = NOW() WHERE user_id = $2`, [passwordHash, userId]);
+  }
+
   async usernameExists(conn: DbConnection, username: string): Promise<boolean> {
     const res = await conn.query(`SELECT 1 FROM users WHERE LOWER(username) = LOWER($1)`, [username]);
     return res.rows.length > 0;

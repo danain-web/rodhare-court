@@ -1,19 +1,32 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getAdminEquipmentApi, createAdminEquipmentApi, getAdminSportsApi, EquipmentAdmin } from '../services/admin';
+import {
+  getAdminEquipmentApi,
+  createAdminEquipmentApi,
+  updateAdminEquipmentApi,
+  deleteAdminEquipmentApi,
+  getAdminSportsApi,
+  EquipmentAdmin,
+} from '../services/admin';
 import { StaffLayout } from '../components/layout/StaffLayout';
-import { Alert, EmptyState, LoadingState, Modal, PageHeader, StatCard, formatTHB, sportLabel } from '../components/ui';
-import { AlertTriangle, Boxes, Loader2, Package, PackageCheck, Plus, Search, ShieldCheck, Warehouse } from 'lucide-react';
+import { AdminSportsPanel } from '../components/AdminSportsPanel';
+import { Alert, ConfirmModal, EmptyState, LoadingState, Modal, PageHeader, StatCard, apiErrorMessage, formatTHB, sportLabel } from '../components/ui';
+import { AlertTriangle, Boxes, Loader2, Package, PackageCheck, Pencil, Plus, Search, ShieldCheck, Trash2, Warehouse } from 'lucide-react';
 
 // UCS-8 ทะเบียนคลังอุปกรณ์กีฬา (Equipment Inventory Ledger)
 export const AdminEquipmentPage: React.FC = () => {
   const queryClient = useQueryClient();
   const [showModal, setShowModal] = useState(false);
+  const [editing, setEditing] = useState<EquipmentAdmin | null>(null); // null = เพิ่มใหม่
+  const [deleting, setDeleting] = useState<EquipmentAdmin | null>(null);
+  const [deleteError, setDeleteError] = useState('');
   const [sportTypeId, setSportTypeId] = useState<number>(1);
   const [name, setName] = useState('');
   const [totalQuantity, setTotalQuantity] = useState<number>(10);
   const [rentalFee, setRentalFee] = useState<number>(30);
+  const [depositFee, setDepositFee] = useState<number>(0);
+  const [fineRatePerDay, setFineRatePerDay] = useState<number>(0);
   const [replacementCost, setReplacementCost] = useState<number>(500);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
@@ -23,23 +36,57 @@ export const AdminEquipmentPage: React.FC = () => {
   const { data: equipmentList = [], isLoading } = useQuery({ queryKey: ['adminEquipment'], queryFn: getAdminEquipmentApi });
   const { data: sports = [] } = useQuery({ queryKey: ['adminSports'], queryFn: getAdminSportsApi });
 
-  const createMutation = useMutation({
-    mutationFn: createAdminEquipmentApi,
+  const openCreate = () => {
+    setEditing(null);
+    setName('');
+    setSportTypeId(sports[0]?.sportTypeId ?? 1);
+    setTotalQuantity(10);
+    setRentalFee(30);
+    setDepositFee(0);
+    setFineRatePerDay(0);
+    setReplacementCost(500);
+    setErrorMsg('');
+    setShowModal(true);
+  };
+
+  const openEdit = (eq: EquipmentAdmin) => {
+    setEditing(eq);
+    setName(eq.name);
+    setSportTypeId(eq.sportTypeId);
+    setTotalQuantity(eq.totalQuantity);
+    setRentalFee(eq.rentalFee);
+    setDepositFee(eq.depositFee);
+    setFineRatePerDay(eq.fineRatePerDay);
+    setReplacementCost(eq.replacementCost);
+    setErrorMsg('');
+    setShowModal(true);
+  };
+
+  const saveMutation = useMutation({
+    mutationFn: (input: Parameters<typeof createAdminEquipmentApi>[0]) =>
+      editing ? updateAdminEquipmentApi(editing.equipmentId, input) : createAdminEquipmentApi(input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminEquipment'] });
       setShowModal(false);
-      setSuccessMsg(`เพิ่มอุปกรณ์ "${name}" เข้าคลังเรียบร้อย`);
-      setName('');
+      setSuccessMsg(editing ? `แก้ไขอุปกรณ์ "${name}" เรียบร้อย` : `เพิ่มอุปกรณ์ "${name}" เข้าคลังเรียบร้อย`);
       setErrorMsg('');
     },
-    onError: (err: any) => {
-      setErrorMsg(err.response?.data?.message || 'Failed to create equipment');
+    onError: (err) => setErrorMsg(apiErrorMessage(err, 'บันทึกอุปกรณ์ไม่สำเร็จ')),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => deleteAdminEquipmentApi(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminEquipment'] });
+      setSuccessMsg(`ลบอุปกรณ์ "${deleting?.name}" เรียบร้อย`);
+      setDeleting(null);
     },
+    onError: (err) => setDeleteError(apiErrorMessage(err, 'ลบอุปกรณ์ไม่สำเร็จ')),
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    createMutation.mutate({ sportTypeId, name, totalQuantity, rentalFee, replacementCost });
+    saveMutation.mutate({ sportTypeId, name, totalQuantity, rentalFee, depositFee, fineRatePerDay, replacementCost });
   };
 
   const filtered = useMemo(() => {
@@ -65,7 +112,7 @@ export const AdminEquipmentPage: React.FC = () => {
             <Link to="/admin/courts" className="btn-soft">
               <Warehouse className="h-4 w-4" /> จัดการสนาม
             </Link>
-            <button onClick={() => setShowModal(true)} className="btn-primary">
+            <button onClick={openCreate} className="btn-primary">
               <Plus className="h-4 w-4" /> เพิ่มรายการอุปกรณ์
             </button>
           </>
@@ -128,7 +175,8 @@ export const AdminEquipmentPage: React.FC = () => {
                   <th className="px-3 py-2.5 text-center">ว่างพร้อมเช่า</th>
                   <th className="px-3 py-2.5 text-center">ถูกจอง/ยืมอยู่</th>
                   <th className="px-3 py-2.5">ระดับสต็อก</th>
-                  <th className="rounded-r-lg px-3 py-2.5 text-right">ค่าเช่า / ราคาประเมิน</th>
+                  <th className="px-3 py-2.5 text-right">ค่าเช่า / ราคาประเมิน</th>
+                  <th className="rounded-r-lg px-3 py-2.5 text-right">จัดการ</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -166,6 +214,23 @@ export const AdminEquipmentPage: React.FC = () => {
                         <div className="font-semibold text-forest-950">{formatTHB(eq.rentalFee, 0)}/ชิ้น</div>
                         <div className="text-[11px] text-rose-600">ปรับชำรุด {formatTHB(eq.replacementCost, 0)}</div>
                       </td>
+                      <td className="px-3 py-3 text-right">
+                        <div className="flex justify-end gap-1.5">
+                          <button onClick={() => openEdit(eq)} className="btn-soft px-2.5 py-1.5 text-xs" aria-label={`แก้ไข ${eq.name}`}>
+                            <Pencil className="h-3.5 w-3.5" /> แก้ไข
+                          </button>
+                          <button
+                            onClick={() => {
+                              setDeleteError('');
+                              setDeleting(eq);
+                            }}
+                            className="btn-danger-soft px-2.5 py-1.5 text-xs"
+                            aria-label={`ลบ ${eq.name}`}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" /> ลบ
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   );
                 })}
@@ -180,7 +245,26 @@ export const AdminEquipmentPage: React.FC = () => {
         สต็อกตัดอัตโนมัติเมื่อมีการจอง คืนเมื่อยกเลิก/หมดเวลา และอุปกรณ์ชำรุด/สูญหายจะถูกตัดออกจากคลังถาวรเมื่อรับคืน
       </div>
 
-      <Modal open={showModal} onClose={() => setShowModal(false)} title="เพิ่มรายการอุปกรณ์ใหม่">
+      <AdminSportsPanel sports={sports} />
+
+      <ConfirmModal
+        open={!!deleting}
+        danger
+        title="ลบรายการอุปกรณ์"
+        confirmLabel="ลบอุปกรณ์"
+        busy={deleteMutation.isPending}
+        error={deleteError}
+        onClose={() => setDeleting(null)}
+        onConfirm={() => deleting && deleteMutation.mutate(deleting.equipmentId)}
+        message={
+          <>
+            ต้องการลบ <strong>{deleting?.name}</strong> ออกจากทะเบียนหรือไม่? ลบได้เฉพาะอุปกรณ์ที่ไม่เคยถูกจองหรือยืม
+            ถ้ามีประวัติแล้วให้ใช้ "แก้ไข" แล้วตั้งจำนวนทั้งหมดเป็น 0 เพื่อเลิกใช้งานแทน
+          </>
+        }
+      />
+
+      <Modal open={showModal} onClose={() => setShowModal(false)} title={editing ? `แก้ไขอุปกรณ์ EQ-${editing.equipmentId}` : 'เพิ่มรายการอุปกรณ์ใหม่'}>
         <form onSubmit={handleSubmit} className="space-y-4">
           {errorMsg && <Alert tone="error" title={errorMsg} />}
           <div>
@@ -200,7 +284,7 @@ export const AdminEquipmentPage: React.FC = () => {
           <div className="grid grid-cols-3 gap-3">
             <div>
               <label className="label">จำนวนทั้งหมด</label>
-              <input type="number" min="1" required className="input" value={totalQuantity} onChange={(e) => setTotalQuantity(parseInt(e.target.value, 10) || 1)} />
+              <input type="number" min={editing ? 0 : 1} required className="input" value={totalQuantity} onChange={(e) => setTotalQuantity(parseInt(e.target.value, 10) || 0)} />
             </div>
             <div>
               <label className="label">ค่าเช่า (฿)</label>
@@ -211,12 +295,27 @@ export const AdminEquipmentPage: React.FC = () => {
               <input type="number" min="0" required className="input" value={replacementCost} onChange={(e) => setReplacementCost(parseFloat(e.target.value) || 0)} />
             </div>
           </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label">เงินมัดจำ (฿)</label>
+              <input type="number" min="0" className="input" value={depositFee} onChange={(e) => setDepositFee(parseFloat(e.target.value) || 0)} />
+            </div>
+            <div>
+              <label className="label">ค่าปรับคืนช้า (฿/วัน)</label>
+              <input type="number" min="0" className="input" value={fineRatePerDay} onChange={(e) => setFineRatePerDay(parseFloat(e.target.value) || 0)} />
+            </div>
+          </div>
+          {editing && (
+            <p className="rounded-xl bg-panel p-3 text-[11px] text-slate-600">
+              ขณะนี้ถูกจอง/ยืมอยู่ {editing.totalQuantity - editing.availableQuantity} ชิ้น — จำนวนทั้งหมดต้องไม่น้อยกว่านี้ ระบบปรับจำนวนว่างให้ตามส่วนต่างอัตโนมัติ
+            </p>
+          )}
           <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
             <button type="button" onClick={() => setShowModal(false)} className="btn-outline">
               ยกเลิก
             </button>
-            <button type="submit" disabled={createMutation.isPending} className="btn-primary">
-              {createMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null} บันทึกอุปกรณ์
+            <button type="submit" disabled={saveMutation.isPending} className="btn-primary">
+              {saveMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null} บันทึกอุปกรณ์
             </button>
           </div>
         </form>

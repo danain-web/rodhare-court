@@ -1,14 +1,24 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getAdminPromotionsApi, createAdminPromotionApi, PromotionAdmin } from '../services/admin';
+import {
+  getAdminPromotionsApi,
+  createAdminPromotionApi,
+  updateAdminPromotionApi,
+  deleteAdminPromotionApi,
+  PromotionAdmin,
+  PromotionInput,
+} from '../services/admin';
 import { StaffLayout } from '../components/layout/StaffLayout';
-import { Alert, EmptyState, LoadingState, Modal, PageHeader, StatCard, formatThaiDate, todayISO } from '../components/ui';
-import { CalendarDays, Clock, Loader2, Percent, Plus, Tag, Timer, TicketPercent } from 'lucide-react';
+import { Alert, ConfirmModal, EmptyState, LoadingState, Modal, PageHeader, StatCard, apiErrorMessage, formatThaiDate, todayISO } from '../components/ui';
+import { CalendarDays, Clock, Loader2, Pencil, Percent, Plus, Tag, Timer, TicketPercent, Trash2 } from 'lucide-react';
 
 // จัดการโปรโมชั่น (BR14: เฉพาะผู้ดูแลระบบ / BR15: ใช้ได้เฉพาะช่วงวันที่และเวลาที่กำหนด)
 export const AdminPromotionsPage: React.FC = () => {
   const queryClient = useQueryClient();
   const [showModal, setShowModal] = useState(false);
+  const [editing, setEditing] = useState<PromotionAdmin | null>(null); // null = สร้างใหม่
+  const [deleting, setDeleting] = useState<PromotionAdmin | null>(null);
+  const [deleteError, setDeleteError] = useState('');
   const [code, setCode] = useState('');
   const [title, setTitle] = useState('');
   const [discountType, setDiscountType] = useState<'PERCENT' | 'FIXED'>('PERCENT');
@@ -16,12 +26,16 @@ export const AdminPromotionsPage: React.FC = () => {
   const [minBookingHours, setMinBookingHours] = useState<number>(1);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
+  const [isActive, setIsActive] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
   const { data: promotions = [], isLoading } = useQuery({ queryKey: ['adminPromotions'], queryFn: getAdminPromotionsApi });
 
-  const resetForm = () => {
+  const openCreate = () => {
+    setEditing(null);
     setCode('');
     setTitle('');
     setDiscountType('PERCENT');
@@ -29,20 +43,47 @@ export const AdminPromotionsPage: React.FC = () => {
     setMinBookingHours(1);
     setStartDate('');
     setEndDate('');
+    setStartTime('');
+    setEndTime('');
+    setIsActive(true);
     setErrorMsg('');
+    setShowModal(true);
   };
 
-  const createMutation = useMutation({
-    mutationFn: createAdminPromotionApi,
+  const openEdit = (p: PromotionAdmin) => {
+    setEditing(p);
+    setCode(p.code);
+    setTitle(p.title);
+    setDiscountType(p.discountType);
+    setDiscountValue(p.discountValue);
+    setMinBookingHours(p.minBookingHours);
+    setStartDate(p.startDate);
+    setEndDate(p.endDate);
+    setStartTime(p.startTime || '');
+    setEndTime(p.endTime || '');
+    setIsActive(p.isActive);
+    setErrorMsg('');
+    setShowModal(true);
+  };
+
+  const saveMutation = useMutation({
+    mutationFn: (input: PromotionInput) => (editing ? updateAdminPromotionApi(editing.promotionId, input) : createAdminPromotionApi(input)),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminPromotions'] });
       setShowModal(false);
-      setSuccessMsg(`สร้างโปรโมชั่น ${code} เรียบร้อย`);
-      resetForm();
+      setSuccessMsg(editing ? `แก้ไขโปรโมชั่น ${code} เรียบร้อย` : `สร้างโปรโมชั่น ${code} เรียบร้อย`);
     },
-    onError: (err: any) => {
-      setErrorMsg(err.response?.data?.message || 'Failed to create promotion');
+    onError: (err) => setErrorMsg(apiErrorMessage(err, 'บันทึกโปรโมชั่นไม่สำเร็จ')),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => deleteAdminPromotionApi(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminPromotions'] });
+      setSuccessMsg(`ลบโปรโมชั่น ${deleting?.code} เรียบร้อย`);
+      setDeleting(null);
     },
+    onError: (err) => setDeleteError(apiErrorMessage(err, 'ลบโปรโมชั่นไม่สำเร็จ')),
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -52,7 +93,22 @@ export const AdminPromotionsPage: React.FC = () => {
       setErrorMsg('วันสิ้นสุดต้องไม่ก่อนวันเริ่มโปรโมชั่น');
       return;
     }
-    createMutation.mutate({ code, title, discountType, discountValue, minBookingHours, startDate, endDate });
+    if (!!startTime !== !!endTime) {
+      setErrorMsg('ต้องระบุเวลาเริ่มและเวลาสิ้นสุดให้ครบทั้งคู่ (หรือเว้นว่างทั้งคู่ = ใช้ได้ทุกช่วงเวลา)');
+      return;
+    }
+    saveMutation.mutate({
+      code,
+      title,
+      discountType,
+      discountValue,
+      minBookingHours,
+      startDate,
+      endDate,
+      startTime: startTime || undefined,
+      endTime: endTime || undefined,
+      isActive,
+    });
   };
 
   const today = todayISO();
@@ -68,7 +124,7 @@ export const AdminPromotionsPage: React.FC = () => {
         title="จัดการโปรโมชั่นและส่วนลด"
         subtitle="เฉพาะผู้ดูแลระบบเท่านั้นที่กำหนดโปรโมชั่นได้ และโปรโมชั่นใช้ได้เฉพาะช่วงวันที่และเวลาที่กำหนด"
         actions={
-          <button onClick={() => setShowModal(true)} className="btn-primary">
+          <button onClick={openCreate} className="btn-primary">
             <Plus className="h-4 w-4" /> สร้างโปรโมชั่นใหม่
           </button>
         }
@@ -117,13 +173,45 @@ export const AdminPromotionsPage: React.FC = () => {
                     จองขั้นต่ำ <strong>{promo.minBookingHours}</strong> ชั่วโมง
                   </div>
                 </div>
+                <div className="relative flex justify-end gap-1.5 border-t border-slate-100 pt-3">
+                  <button onClick={() => openEdit(promo)} className="btn-soft px-2.5 py-1.5 text-xs" aria-label={`แก้ไข ${promo.code}`}>
+                    <Pencil className="h-3.5 w-3.5" /> แก้ไข
+                  </button>
+                  <button
+                    onClick={() => {
+                      setDeleteError('');
+                      setDeleting(promo);
+                    }}
+                    className="btn-danger-soft px-2.5 py-1.5 text-xs"
+                    aria-label={`ลบ ${promo.code}`}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" /> ลบ
+                  </button>
+                </div>
               </div>
             );
           })}
         </div>
       )}
 
-      <Modal open={showModal} onClose={() => setShowModal(false)} title="สร้างโค้ดโปรโมชั่น">
+      <ConfirmModal
+        open={!!deleting}
+        danger
+        title="ลบโปรโมชั่น"
+        confirmLabel="ลบโปรโมชั่น"
+        busy={deleteMutation.isPending}
+        error={deleteError}
+        onClose={() => setDeleting(null)}
+        onConfirm={() => deleting && deleteMutation.mutate(deleting.promotionId)}
+        message={
+          <>
+            ต้องการลบโปรโมชั่น <strong className="font-mono">{deleting?.code}</strong> หรือไม่? ลบได้เฉพาะโปรโมชั่นที่ยังไม่เคยถูกใช้กับการจอง
+            ถ้าเคยใช้แล้วให้ใช้ "แก้ไข" แล้วปิดการใช้งานแทน
+          </>
+        }
+      />
+
+      <Modal open={showModal} onClose={() => setShowModal(false)} title={editing ? `แก้ไขโปรโมชั่น ${editing.code}` : 'สร้างโค้ดโปรโมชั่น'}>
         <form onSubmit={handleSubmit} className="space-y-4">
           {errorMsg && <Alert tone="error" title={errorMsg} />}
           <div className="grid grid-cols-2 gap-3">
@@ -163,12 +251,26 @@ export const AdminPromotionsPage: React.FC = () => {
               <input type="date" required className="input" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
             </div>
           </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label">เวลาเริ่มของแต่ละวัน (ไม่บังคับ)</label>
+              <input type="time" className="input" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
+            </div>
+            <div>
+              <label className="label">เวลาสิ้นสุดของแต่ละวัน (ไม่บังคับ)</label>
+              <input type="time" className="input" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+            </div>
+          </div>
+          <label className="flex cursor-pointer items-center gap-3 rounded-xl bg-panel p-3 text-sm">
+            <input type="checkbox" className="h-4 w-4" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
+            <span className="font-semibold text-forest-950">เปิดใช้งานโปรโมชั่นนี้</span>
+          </label>
           <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
             <button type="button" onClick={() => setShowModal(false)} className="btn-outline">
               ยกเลิก
             </button>
-            <button type="submit" disabled={createMutation.isPending} className="btn-primary">
-              {createMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null} บันทึกโปรโมชั่น
+            <button type="submit" disabled={saveMutation.isPending} className="btn-primary">
+              {saveMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null} บันทึกโปรโมชั่น
             </button>
           </div>
         </form>

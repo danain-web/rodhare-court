@@ -129,6 +129,11 @@ export const LoginPage: React.FC = () => {
             <div>
               <label className="label">รหัสผ่าน</label>
               <input type="password" required className="input" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
+              <div className="mt-1.5 text-right">
+                <Link to="/forgot-password" className="text-xs font-semibold text-forest-700 hover:underline">
+                  ลืมรหัสผ่าน?
+                </Link>
+              </div>
             </div>
             <button type="submit" disabled={isSubmitting} className="btn-primary w-full py-3">
               {isSubmitting ? (

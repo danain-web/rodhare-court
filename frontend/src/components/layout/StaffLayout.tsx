@@ -15,6 +15,7 @@ import {
   Settings,
   ShieldCheck,
   Tag,
+  Users,
   Warehouse,
   X,
 } from 'lucide-react';
@@ -46,6 +47,7 @@ const ITEMS: { group: string; items: Item[] }[] = [
       { to: '/admin/courts', label: 'จัดการสนาม', icon: <Warehouse className="h-4 w-4" />, permission: 'court.manage' },
       { to: '/admin/equipment', label: 'สต็อกอุปกรณ์กีฬา', icon: <PackageCheck className="h-4 w-4" />, permission: 'catalog.manage' },
       { to: '/admin/promotions', label: 'โปรโมชั่น', icon: <Tag className="h-4 w-4" />, permission: 'catalog.manage' },
+      { to: '/admin/users', label: 'จัดการผู้ใช้', icon: <Users className="h-4 w-4" />, permission: 'user.manage' },
       { to: '/admin/audit-logs', label: 'บันทึกการทำงาน', icon: <FileClock className="h-4 w-4" />, permission: 'audit.view' },
       { to: '/admin/settings', label: 'ตั้งค่าระบบ', icon: <Settings className="h-4 w-4" />, permission: 'settings.manage' },
       { to: '/admin/roles', label: 'จัดการสิทธิ์', icon: <ShieldCheck className="h-4 w-4" />, permission: 'role.manage' },
