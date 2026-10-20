@@ -12,6 +12,7 @@ export interface AdminUserDTO {
   roles: string[];
   isActive: boolean;
   googleLinked: boolean;
+  upcomingBookings: number; // การจองที่ยังไม่ถึงกำหนด (ยังถือครองสนามอยู่) — ให้แอดมินเห็นก่อนตัดสินใจระงับบัญชี
   createdAt: Date;
 }
 
@@ -19,6 +20,8 @@ const USER_COLUMNS = `
   u.user_id, u.username, u.email, u.first_name, u.last_name, u.phone, u.member_type_id,
   COALESCE(m.display_name, m.type_name) AS member_type_name, u.is_active,
   (u.google_sub IS NOT NULL) AS google_linked, u.created_at,
+  (SELECT COUNT(*)::int FROM bookings b
+    WHERE b.user_id = u.user_id AND b.status IN ('PENDING_PAYMENT', 'PAYMENT_VERIFIED', 'CONFIRMED') AND b.booking_date >= CURRENT_DATE) AS upcoming_bookings,
   COALESCE(array_agg(r.role_name ORDER BY r.role_name) FILTER (WHERE r.role_name IS NOT NULL), '{}') AS roles`;
 
 const USER_FROM = `
@@ -41,6 +44,7 @@ const mapUser = (r: any): AdminUserDTO => ({
   roles: r.roles,
   isActive: r.is_active === true,
   googleLinked: r.google_linked === true,
+  upcomingBookings: r.upcoming_bookings ?? 0,
   createdAt: r.created_at,
 });
 

@@ -198,6 +198,7 @@ export interface AdminUser {
   roles: string[];
   isActive: boolean;
   googleLinked: boolean;
+  upcomingBookings: number;
   createdAt: string;
 }
 

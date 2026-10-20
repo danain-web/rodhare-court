@@ -43,6 +43,7 @@ describe('Admin user management', () => {
     expect(found.body.data.users).toHaveLength(1);
     expect(found.body.data.users[0]).toMatchObject({ userId: u.userId, roles: ['CUSTOMER'], isActive: true });
     expect(found.body.data.users[0].passwordHash).toBeUndefined();
+    expect(found.body.data.users[0].upcomingBookings).toBe(0);
     expect(found.body.data.roles.map((r: any) => r.roleName)).toEqual(expect.arrayContaining(['CUSTOMER', 'STAFF', 'ADMIN']));
     expect(found.body.data.memberTypes.length).toBeGreaterThan(0);
 
