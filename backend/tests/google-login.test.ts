@@ -200,6 +200,30 @@ describe('เชื่อมบัญชี Google จากหน้าโป�
     expect(viaPassword.status).toBe(200);
   });
 
+  it('เชื่อม Google ที่เป็นอีเมล @kkumail.com → ยกระดับเป็นนักศึกษา · อีเมลทั่วไปไม่เปลี่ยน · ไม่ลดระดับคนที่แอดมินตั้งไว้สูงกว่า', async () => {
+    const student = await memberTypeId('STUDENT');
+    const personnel = await memberTypeId('PERSONNEL');
+
+    const a = await registerAndGetCookie('gup');
+    createdPasswordUsers.push(a.user.username);
+    mockVerify.mockResolvedValueOnce(identity()); // @kkumail.com ยืนยันแล้ว
+    expect((await request(app).post('/api/auth/google/link').set('Cookie', a.cookies).send({ credential: CREDENTIAL })).status).toBe(200);
+    expect((await userRow(a.user.email)).member_type_id).toBe(student);
+
+    const b = await registerAndGetCookie('gnoup');
+    createdPasswordUsers.push(b.user.username);
+    mockVerify.mockResolvedValueOnce(identity({ email: `gtest${stamp}other@gmail.com` }));
+    await request(app).post('/api/auth/google/link').set('Cookie', b.cookies).send({ credential: CREDENTIAL });
+    expect((await userRow(b.user.email)).member_type_id).toBe(await memberTypeId('EXTERNAL'));
+
+    const c = await registerAndGetCookie('gnodown');
+    createdPasswordUsers.push(c.user.username);
+    await pool.query('UPDATE users SET member_type_id = $1 WHERE user_id = $2', [personnel, c.userId]);
+    mockVerify.mockResolvedValueOnce(identity());
+    await request(app).post('/api/auth/google/link').set('Cookie', c.cookies).send({ credential: CREDENTIAL });
+    expect((await userRow(c.user.email)).member_type_id).toBe(personnel);
+  });
+
   it('บัญชี Google ที่ถูกใช้กับผู้ใช้อื่นแล้ว → 409', async () => {
     const owner = identity();
     mockVerify.mockResolvedValueOnce(owner);

@@ -97,7 +97,7 @@ export class AdminService {
           await this.adminRepo.deleteSport(conn, sportTypeId);
           await insertAudit(conn, { userId: adminUserId, action: 'DELETE_SPORT', entityName: 'SPORT_TYPES', entityId: sportTypeId, oldValues: before, ipAddress });
         }, adminUserId),
-      'ลบประเภทกีฬานี้ไม่ได้ เพราะยังมีสนามหรืออุปกรณ์ใช้ประเภทนี้อยู่ — ให้ปิดใช้งาน (แก้ไข → ปิดการใช้งาน) แทน'
+      'ลบประเภทกีฬานี้ไม่ได้ เพราะยังมีสนามหรืออุปกรณ์ใช้ประเภทนี้อยู่ — ย้าย/ลบสนามและอุปกรณ์เหล่านั้นก่อน หรือปิดใช้งานประเภทนี้ (แก้ไข → ปิดการใช้งาน) เพื่อซ่อนจากตัวกรองฝั่งลูกค้า'
     );
   }
 

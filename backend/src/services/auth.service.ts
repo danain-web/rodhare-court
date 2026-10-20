@@ -118,20 +118,31 @@ export class AuthService {
         const user = await this.userRepository.findById(conn, userId);
         if (!user) throw AppError.notFound('ไม่พบผู้ใช้');
         if (user.googleSub && user.googleSub !== identity.sub) throw AppError.conflict('บัญชีนี้เชื่อม Google บัญชีอื่นอยู่แล้ว');
-        if (user.googleSub === identity.sub) return; // เชื่อมอยู่แล้ว (idempotent)
+        const alreadyLinked = user.googleSub === identity.sub; // เชื่อมอยู่แล้ว (idempotent)
 
-        const owner = await this.userRepository.findByGoogleSub(conn, identity.sub);
-        if (owner && owner.userId !== userId) throw AppError.conflict('บัญชี Google นี้ถูกใช้เชื่อมกับผู้ใช้อื่นแล้ว');
+        if (!alreadyLinked) {
+          const owner = await this.userRepository.findByGoogleSub(conn, identity.sub);
+          if (owner && owner.userId !== userId) throw AppError.conflict('บัญชี Google นี้ถูกใช้เชื่อมกับผู้ใช้อื่นแล้ว');
+          await this.userRepository.linkGoogleSub(conn, userId, identity.sub);
+        }
 
-        await this.userRepository.linkGoogleSub(conn, userId, identity.sub);
-        await insertAudit(conn, {
-          userId,
-          action: 'LINK_GOOGLE',
-          entityName: 'USERS',
-          entityId: userId,
-          newValues: { googleEmail: identity.email },
-          ipAddress,
-        });
+        // อีเมลมหาวิทยาลัยที่ Google ยืนยันแล้ว = พิสูจน์สิทธิ์ส่วนลดได้ → ยกระดับจากประเภทเริ่มต้น (บุคคลภายนอก) เท่านั้น ไม่ลดระดับใคร
+        // (สมัครด้วยรหัสผ่านทุกคนเริ่มที่บุคคลภายนอก — ดู register)
+        const domainTypeId = await this.userRepository.getMemberTypeIdForEmailDomain(conn, identity.email);
+        const upgraded =
+          !!domainTypeId && user.memberTypeId === (await this.userRepository.getDefaultMemberTypeId(conn)) && domainTypeId !== user.memberTypeId;
+        if (upgraded) await this.userRepository.setMemberType(conn, userId, domainTypeId!);
+
+        if (!alreadyLinked || upgraded) {
+          await insertAudit(conn, {
+            userId,
+            action: 'LINK_GOOGLE',
+            entityName: 'USERS',
+            entityId: userId,
+            newValues: { googleEmail: identity.email, ...(upgraded && { memberTypeId: domainTypeId }) },
+            ipAddress,
+          });
+        }
       });
     } catch (err: any) {
       if (err?.code === '23505') throw AppError.conflict('บัญชี Google นี้ถูกใช้เชื่อมกับผู้ใช้อื่นแล้ว');

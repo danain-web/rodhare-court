@@ -121,7 +121,9 @@ export const AdminSportsPanel: React.FC<{ sports: SportType[] }> = ({ sports }) 
             <input type="checkbox" className="h-4 w-4" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
             <span>
               <span className="block font-semibold text-forest-950">เปิดใช้งาน</span>
-              <span className="block text-[11px] text-slate-500">ถ้าประเภทนี้มีสนามหรืออุปกรณ์ใช้อยู่แล้ว ให้ปิดใช้งานแทนการลบ</span>
+              <span className="block text-[11px] text-slate-500">
+                ปิดใช้งาน = ซ่อนประเภทนี้จากตัวกรองฝั่งลูกค้า (สนามและอุปกรณ์เดิมยังอยู่ ไม่ถูกลบ) · ถ้ามีสนามหรืออุปกรณ์ใช้อยู่จะลบไม่ได้
+              </span>
             </span>
           </label>
           <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
